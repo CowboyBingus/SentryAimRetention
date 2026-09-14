@@ -1,0 +1,464 @@
+local ffi,bit=require('ffi'),require('bit')
+local M={}
+local ZERO=string.rep('\0',4)
+local function u(b,o)
+    local v=ffi.new('uint32_t[1]');ffi.copy(v,b:sub(o+1,o+4),4);return tonumber(v[0])
+end
+local function f(b,o)
+    local v=ffi.new('float[1]');ffi.copy(v,b:sub(o+1,o+4),4);return tonumber(v[0])
+end
+local function word(n) return ffi.string(ffi.new('uint32_t[1]',n),4) end
+local function finite(n) return n==n and math.abs(n)<100000 end
+local function vector(b)
+    return b and #b==12 and finite(f(b,0)) and finite(f(b,4)) and finite(f(b,8))
+end
+local function nonzero(b) return f(b,0)~=0 or f(b,4)~=0 or f(b,8)~=0 end
+local function fromhex(h) return (h:gsub('..',function(p)return string.char(tonumber(p,16))end)) end
+-- Resource identity and BehaviorComponent defaults from this build's data.
+local profiles={
+    [fromhex('701de358cfd685ef')]={name='Gatling',behavior=212,fire_gate={pause=12,resume=4}},
+    [fromhex('bb26ba7638e4cd37')]={name='Machine gun',behavior=310,fire_gate={pause=8,resume=3}},
+    [fromhex('a8a8ffcf360f0756')]={name='Laser cannon',behavior=306},
+    [fromhex('c6e986dc68950737')]={name='Rocket',behavior=609},
+    [fromhex('582896febac30c82')]={name='Flamethrower',behavior=206},
+    [fromhex('742dce3b2e81a051')]={name='Mortar',behavior=317},
+    [fromhex('8b2f0938183a05b2')]={name='EMS mortar',behavior=321},
+}
+-- EMS mortar uses the same mechanism, with its own resource/profile identity.
+M.profiles=profiles
+local signatures={
+    {0x6b7f20,'405741574883ec283b1532ed0c02450fb6f94c8b15074b0b'},
+    {0xf2b360,'4883ec288b41083b05f3b885010f84d00000004c8b150617'},
+    {0xf2b450,'4883ec288b41083b0503b885010f84d00000004c8b151616'},
+    {0x74ddf0,'48894c24085355565741574883ec20'},
+}
+M.signatures=signatures
+local function matches(api,guards)
+    for _,g in ipairs(guards) do
+        if api.read(g.address,#g.bytes)~=g.bytes then return false end
+    end
+    return true
+end
+
+function M.snapshot(api,game)
+    local function read(a,n)
+        local b=api.read(a,n);assert(b and #b==n,'Runtime read unavailable');return b
+    end
+    local function pointer(b)
+        return assert(api.pointer(b),'Runtime pointer unavailable')
+    end
+    local roots={}
+    local function root(rva)
+        local b=read(game+rva,8)
+        if b==string.rep('\0',8) then return nil end
+        local p=pointer(b);roots[#roots+1]={address=game+rva,bytes=b};return p
+    end
+    local tm,bm,rm=root(0x276ca40),root(0x276c470),root(0x276ca80)
+    if not tm or not bm or not rm then return {},'waiting_for_sentries' end
+    local th=read(tm+308,84)
+    local cap,total,active=u(th,0),u(th,12),u(th,16)
+    assert(active<=total and total<=cap and cap<=8192,'Unsupported targeting registry')
+    if active==0 then return {},'waiting_for_sentries' end
+    local rh=read(rm+8,88);local bh=read(bm+32,80)
+    assert(u(rh,16)<=u(rh,12) and u(rh,12)<=u(rh,0) and u(rh,0)<=4096,'Unsupported turret registry')
+    assert(u(bh,0)<=16384,'Unsupported behavior registry')
+    local ep=pointer(th:sub(53,60));local rt=pointer(th:sub(69,76));local nt=pointer(th:sub(77,84))
+    local result={}
+    local function lookup(manager,off,id,limit,guards)
+        local h=read(manager+off,20);local c=u(h,8)
+        if c==0 then return nil end
+        assert(c<=limit and bit.band(c,c-1)==0,'Unsupported entity map')
+        local data=pointer(h:sub(1,8));local empty,mul=u(h,12),u(h,16)
+        local product=ffi.new('uint64_t',id)*ffi.new('uint64_t',mul)
+        for probe=0,math.min(c,128)-1 do
+            local slot=bit.band(tonumber(ffi.cast('uint32_t',product))+probe,c-1)
+            local address=data+slot*8;local row=read(address,8)
+            if u(row,0)==id then
+                guards[#guards+1]={address=manager+off,bytes=h}
+                guards[#guards+1]={address=address,bytes=row}
+                return u(row,4)
+            end
+            if u(row,0)==empty then return nil end
+        end
+        error('Entity map probe bound exceeded')
+    end
+    for i=0,active-1 do
+        local entity_pointer=read(ep+8*i,8);local entity_address=pointer(entity_pointer)
+        local entity=read(entity_address,24);local profile=profiles[entity:sub(1,8)]
+        if profile and bit.band(entity:byte(21),3)==1 then
+            local guards={}
+            for _,g in ipairs(roots) do guards[#guards+1]=g end
+            for _,g in ipairs({{tm+360,th:sub(53,60)},{tm+376,th:sub(69,76)},
+                {tm+384,th:sub(77,84)},{ep+8*i,entity_pointer},{entity_address,entity:sub(1,20)}}) do
+                guards[#guards+1]={address=g[1],bytes=g[2]}
+            end
+            local id=u(entity,8)
+            local ti=lookup(tm,336,id,16384,guards)
+            local bi=lookup(bm,64,id,32768,guards)
+            local ri=lookup(rm,40,id,8192,guards)
+            if ti==i and bi and ri and bi~=0xffffffff and ri~=0xffffffff then
+                assert(bi<u(bh,0) and ri<u(rh,12),'Component index out of range')
+                local function array(manager,off,index,stride,size)
+                    local b=read(manager+off,8);local p=pointer(b)
+                    guards[#guards+1]={address=manager+off,bytes=b}
+                    return p+index*stride,read(p+index*stride,size)
+                end
+                local be=select(2,array(bm,88,bi,8,8))
+                local re=select(2,array(rm,64,ri,8,8))
+                assert(be==entity_pointer and re==entity_pointer,'Component identity mismatch')
+                local ba,behavior=array(bm,96,bi,496,124)
+                local ca,control=array(rm,88,ri,16,16)
+                local runtime=read(rt+208*i,32);local network=read(nt+24*i,24)
+                assert(u(behavior,0)==profile.behavior,'Unsupported sentry behavior')
+                assert(behavior:byte(121)<=1 and control:byte(1)<=1,'Unsupported component flags')
+                assert(vector(runtime:sub(9,20)) and vector(runtime:sub(21,32))
+                    and vector(behavior:sub(29,40)),'Invalid aim vector')
+                assert(finite(f(control,8)) and f(control,8)>=0 and f(control,8)<=1000
+                    and finite(f(control,12)) and f(control,12)>=0 and f(control,12)<=1000,'Invalid turret speeds')
+                local flags=u(network,16)
+                local row={id=id,key=entity:sub(1,20),entity=entity_address,guards=guards,
+                    transition_guards={{address=ba+8,bytes=behavior:sub(9,12)},
+                        {address=ba+24,bytes=behavior:sub(25,28)},
+                        {address=ba+96,bytes=behavior:sub(97,100)},
+                        {address=ba+120,bytes=behavior:sub(121,121)}},
+                    profile=profile.name,behavior_address=ba,node=u(behavior,8),target=u(behavior,24),
+                    authority_address=entity_address+20,
+                    has=behavior:byte(121)==1,source_flags=u(behavior,96),point=behavior:sub(29,40),
+                    runtime_target=u(runtime,0),raw=runtime:sub(9,20),computed=runtime:sub(21,32),
+                    raw_address=rt+208*i+8,computed_address=rt+208*i+20,
+                    flags_address=nt+24*i+16,flags=flags,control_address=ca,
+                    horizontal=control:sub(9,12),vertical=control:sub(13,16),enabled=control:byte(1)==1}
+                if profile.fire_gate then
+                    local wm=pointer(read(game+0x276c9f0,8))
+                    local fire_guards={}
+                    local wi=lookup(wm,48,id,32768,fire_guards)
+                    assert(wi and wi~=0xffffffff and wi<16384,'Weapon data unavailable')
+                    local function weapon_array(off,stride,size)
+                        local b=read(wm+off,8);local p=pointer(b)
+                        fire_guards[#fire_guards+1]={address=wm+off,bytes=b}
+                        return p+stride*wi,read(p+stride*wi,size)
+                    end
+                    local _,we=weapon_array(72,8,8)
+                    assert(we==entity_pointer,'Weapon identity mismatch')
+                    local _,wr=weapon_array(88,992,212)
+                    local mode_address,network=weapon_array(96,12,12)
+                    local count,index=u(wr,200),u(wr,204)
+                    assert(count>0 and count<=24 and index<count,'Invalid sentry fire nodes')
+                    local node=u(wr,104+4*index)
+                    assert(node<1024 and u(network,0)<=8,'Invalid sentry weapon state')
+                    fire_guards[#fire_guards+1]={address=game+0x276c9f0,bytes=read(game+0x276c9f0,8)}
+                    local cm=pointer(read(game+0x276c390,8))
+                    local ci=lookup(cm,40,id,32768,fire_guards)
+                    assert(ci and ci~=0xffffffff and ci<16384,'Weapon trigger unavailable')
+                    local triggers=read(cm+88,8)
+                    local trigger=read(pointer(triggers)+ci,1):byte(1)
+                    assert(trigger<=1,'Invalid sentry trigger')
+                    row.fire={manager=wm,mode_address=mode_address,mode=u(network,0),
+                        guards=fire_guards,unit=u(entity,12),node=node,trigger=trigger==1,
+                        pause=profile.fire_gate.pause,resume=profile.fire_gate.resume}
+                end
+                result[#result+1]=row
+            end
+        end
+    end
+    return result,#result==0 and 'waiting_for_sentries' or 'observing'
+end
+
+local function writable(api,s)
+    return api.writable_data(s.flags_address,4) and api.writable_data(s.raw_address,24)
+        and api.writable_data(s.control_address+8,8)
+end
+local function same(a,b)
+    return a.key==b.key and a.flags_address==b.flags_address
+        and a.control_address==b.control_address and a.raw_address==b.raw_address
+end
+
+function M.release(api,native,lease)
+    local s=lease.snapshot
+    -- A removed/moved entity owns no writable lease here. Never follow an old slot.
+    if not matches(api,s.guards) then return true,'retired' end
+    if s.authority_address then
+        local flags=api.read(s.authority_address,1)
+        if not flags or bit.band(flags:byte(1),1)==0 then return true,'authority_changed' end
+    end
+    if not writable(api,s) then return false,'restore_memory_unavailable' end
+    local restored=true
+    if not lease.completed then
+        for _,w in ipairs(lease.aim_writes or {}) do
+            local current=api.read(w.address,12)
+            local ours=false
+            if current then
+                for cut=0,12 do
+                    if current==w.after:sub(1,cut)..w.before:sub(cut+1) then ours=true;break end
+                end
+            end
+            -- A derived aim changed by the engine is no longer ours to restore.
+            -- Still release every owned control even if one rollback fails.
+            if not current then restored=false
+            elseif ours and current~=w.before then
+                local called,written=pcall(api.write,w.address,w.before)
+                if not called or not written or api.read(w.address,12)~=w.before then restored=false end
+            end
+        end
+    end
+    -- Do not overwrite speed changes made by native behavior or another mod.
+    for _,axis in ipairs({{'horizontal',8},{'vertical',12}}) do
+        if lease[axis[1]] then
+            local address=s.control_address+axis[2];local current=api.read(address,4)
+            if current==ZERO then
+                local called=pcall(native[axis[1]],s.entity,f(s[axis[1]],0))
+                if not called or api.read(address,4)~=s[axis[1]] then restored=false
+                else lease[axis[1]]=nil end
+            elseif not current then restored=false
+            else lease[axis[1]]=nil end
+        end
+    end
+    if lease.flag then
+        local current=api.read(s.flags_address,4)
+        if not current then restored=false
+        elseif bit.band(u(current,0),2)~=0 then
+            local called=pcall(native.retention,s.id,false)
+            if not called or api.read(s.flags_address,4)~=word(bit.band(u(current,0),bit.bnot(2))) then restored=false
+            else lease.flag=nil end
+        else lease.flag=nil end
+    end
+    return restored,restored and 'restored' or 'restore_incomplete'
+end
+
+local function acquire(api,native,s,record,state)
+    if s.flags~=0 or not matches(api,s.guards) or not matches(api,s.transition_guards or {}) then return true,'busy' end
+    if s.authority_address then
+        local flags=api.read(s.authority_address,1)
+        if not flags or bit.band(flags:byte(1),3)~=1 then return true,'busy' end
+    end
+    if not writable(api,s) then return false,'hold_memory_unavailable' end
+    local lease={snapshot=s,flag=true};record.lease=lease
+    -- Set the native retention bit first: the engine skips its target-source
+    -- prepass and fallback path while this bit is owned. AI itself keeps running.
+    native.retention(s.id,true)
+    if api.read(s.flags_address,4)~=word(2) then return false,'hold_flag_failed' end
+    for _,axis in ipairs({{'horizontal',8},{'vertical',12}}) do
+        lease[axis[1]]=true
+        native[axis[1]](s.entity,0)
+        if api.read(s.control_address+axis[2],4)~=ZERO then return false,'hold_speed_failed' end
+    end
+    if s.raw~=record.raw then state.late_aim=state.late_aim+1 end
+    lease.aim_writes={}
+    for _,w in ipairs({{address=s.raw_address,before=s.raw,after=record.raw},
+        {address=s.computed_address,before=s.computed,after=record.computed}}) do
+        lease.aim_writes[#lease.aim_writes+1]=w
+        if not api.write(w.address,w.after) then return false,'hold_aim_failed' end
+    end
+    if api.read(s.raw_address,12)~=record.raw or api.read(s.computed_address,12)~=record.computed then
+        return false,'hold_aim_verify_failed'
+    end
+    state.holds=state.holds+1
+    lease.completed=true
+    return true,'holding'
+end
+
+function M.step(api,native,rows,state)
+    state.records=state.records or {}
+    state.holds=state.holds or 0;state.releases=state.releases or 0;state.late_aim=state.late_aim or 0
+    state.observed=#rows;local seen={};local holding=0
+    for _,s in ipairs(rows) do
+        seen[s.id]=true
+        local record=state.records[s.id]
+        if record and record.snapshot.key==s.key and not same(record.snapshot,s) then
+            -- The native managers compact and reallocate their arrays. Rebase a
+            -- live entity's lease through the freshly validated component maps.
+            if record.lease then
+                local old=record.lease.snapshot;local relocated={}
+                for k,v in pairs(s) do relocated[k]=v end
+                relocated.horizontal=old.horizontal;relocated.vertical=old.vertical
+                record.lease.snapshot=relocated
+            end
+            record.snapshot=s
+        elseif record and not same(record.snapshot,s) then
+            if record.lease then
+                local ok,why=M.release(api,native,record.lease);if not ok then return false,why end
+            end
+            record=nil;state.records[s.id]=nil
+        end
+        local tracking=s.enabled and s.has and s.target~=0 and bit.band(s.source_flags,1)~=0
+        local scan=record and s.has and s.target==0 and bit.band(s.source_flags,32)~=0
+            and s.node~=record.node and nonzero(s.point) and s.point~=record.source_point
+        if record and record.lease then
+            -- A non-target point on the firing node is the dead-target fallback,
+            -- not scanning. A zero point is the observed transition placeholder.
+            if tracking or scan or not s.enabled or s.horizontal~=ZERO or s.vertical~=ZERO
+                or bit.band(s.flags,bit.bnot(2))~=0 then
+                local ok,why=M.release(api,native,record.lease);if not ok then return false,why end
+                record.lease=nil;record.raw=nil;state.releases=state.releases+1
+            elseif bit.band(s.flags,2)==0 then
+                -- The engine explicitly reclaimed targeting; restore our speed
+                -- overrides and wait for a fresh target rather than fighting it.
+                local ok,why=M.release(api,native,record.lease);if not ok then return false,why end
+                record.lease=nil;record.raw=nil;state.releases=state.releases+1
+            end
+        end
+        if tracking and not (record and record.lease) and s.flags==0 and s.runtime_target==s.target then
+            record={snapshot=s,node=s.node,source_point=s.point,raw=s.raw,computed=s.computed}
+            state.records[s.id]=record
+        elseif record and record.raw and not record.lease and not tracking and s.enabled then
+            if scan then record.raw=nil
+            else
+                local ok,why=acquire(api,native,s,record,state)
+                if not ok then return false,why end
+            end
+        end
+        if record then record.latest=s end
+        if record and record.lease then holding=holding+1 end
+    end
+    for id,record in pairs(state.records) do
+        if not seen[id] then
+            if record.lease then
+                local ok,why=M.release(api,native,record.lease);if not ok then return false,why end
+            end
+            state.records[id]=nil
+        end
+    end
+    state.holding=holding
+    return true,holding>0 and 'holding' or (#rows>0 and 'observing' or 'waiting_for_sentries'),holding>0
+end
+
+-- A short adjustment may keep firing. A broad or prolonged sweep cannot.
+-- Separate enter/exit angles and a settle interval avoid rapid mode toggling.
+M.fire_policy={settle_seconds=0.06,sweep_seconds=0.20}
+local function direction(x,y,z)
+    local length=math.sqrt(x*x+y*y+z*z)
+    assert(finite(length) and length>0.00001,'Invalid firing direction')
+    return {x/length,y/length,z/length}
+end
+local function angle(a,b)
+    return math.deg(math.acos(math.max(-1,math.min(1,a[1]*b[1]+a[2]*b[2]+a[3]*b[3]))))
+end
+function M.fire_geometry(s)
+    local pose=s.fire.pose
+    assert(pose and #pose==64 and vector(pose:sub(17,28)) and vector(pose:sub(49,60)),
+        'Invalid muzzle pose')
+    local forward=direction(f(pose,16),f(pose,20),f(pose,24))
+    local aim=direction(f(s.computed,0)-f(pose,48),f(s.computed,4)-f(pose,52),f(s.computed,8)-f(pose,56))
+    return forward,angle(forward,aim)
+end
+local function fire_identity(api,s)
+    local authority=s.authority_address and api.read(s.authority_address,1)
+    return matches(api,s.guards) and matches(api,s.fire.guards)
+        and (not s.authority_address or (authority and bit.band(authority:byte(1),3)==1))
+end
+function M.release_fire(api,native,lease)
+    local s=lease.snapshot
+    if not fire_identity(api,s) then return true end
+    local current=api.read(s.fire.mode_address,4)
+    if not current then return false end
+    -- Restore only the no-fire mode owned by this module.
+    if current~=ZERO then return true end
+    if not api.writable_data(s.fire.mode_address,4) then return false end
+    local ok=pcall(native.fire_mode,s.fire.manager,s.id,lease.mode)
+    return ok and api.read(s.fire.mode_address,4)==word(lease.mode)
+end
+function M.fire_step(api,native,rows,state,now)
+    state.fire_records=state.fire_records or {}
+    state.fire_pauses=state.fire_pauses or 0;state.fire_resumes=state.fire_resumes or 0
+    local seen,paused={},0
+    for _,s in ipairs(rows) do
+        if s.fire then
+            seen[s.id]=true
+            local r=state.fire_records[s.id]
+            if r and r.snapshot.key~=s.key then
+                if r.lease and not M.release_fire(api,native,r.lease) then return false,'fire_restore_failed' end
+                r=nil
+            end
+            r=r or {};state.fire_records[s.id]=r;r.snapshot=s
+            if r.lease then r.lease.snapshot=s end -- refresh maps after native compaction
+            local forward,error_angle=M.fire_geometry(s)
+            r.error=error_angle;r.anchor=r.anchor or forward
+            local tracking=s.enabled and s.has and s.target~=0 and bit.band(s.source_flags,1)~=0
+            local synced=tracking and s.runtime_target==s.target
+            if synced then r.last_target=s.target end
+            local held=not tracking and s.runtime_target==r.last_target and bit.band(s.flags or 0,2)~=0
+                and s.horizontal==ZERO and s.vertical==ZERO
+            local aligned=(synced or held) and error_angle<=s.fire.resume
+            if aligned then
+                r.settled_since=r.settled_since or now
+                if now-r.settled_since>=M.fire_policy.settle_seconds then
+                    r.anchor=forward;r.sweep_since=nil
+                end
+            else r.settled_since=nil end
+            local travel=angle(r.anchor,forward)
+            if not s.fire.trigger then
+                r.anchor=forward;r.sweep_since=nil
+            elseif not aligned and (travel>0.5 or (synced and error_angle>s.fire.resume)) then
+                r.sweep_since=r.sweep_since or now
+            end
+            local broad=(synced and error_angle>s.fire.pause)
+                or (s.fire.trigger and travel>s.fire.pause)
+                or (s.fire.trigger and r.sweep_since and now-r.sweep_since>=M.fire_policy.sweep_seconds)
+            local settled=aligned and now-r.settled_since>=M.fire_policy.settle_seconds
+            if r.lease and s.fire.mode~=0 then r.lease=nil end -- engine/another mod changed the mode
+            if r.lease and (settled or (not tracking and not s.fire.trigger) or not s.enabled) then
+                if not M.release_fire(api,native,r.lease) then return false,'fire_restore_failed' end
+                r.lease=nil;r.anchor=forward;r.sweep_since=nil
+                state.fire_resumes=state.fire_resumes+1
+            elseif not r.lease and broad and s.enabled and s.fire.mode~=0 then
+                if not fire_identity(api,s) or not matches(api,s.transition_guards or {}) then return false,'fire_identity_changed' end
+                if not api.writable_data(s.fire.mode_address,4) then return false,'fire_memory_unavailable' end
+                r.lease={snapshot=s,mode=s.fire.mode} -- journal before invoking the native setter
+                native.fire_mode(s.fire.manager,s.id,0)
+                if api.read(s.fire.mode_address,4)~=ZERO then return false,'fire_pause_failed' end
+                state.fire_pauses=state.fire_pauses+1
+            end
+            if r.lease then paused=paused+1 end
+        end
+    end
+    for id,r in pairs(state.fire_records) do
+        if not seen[id] then
+            if r.lease and not M.release_fire(api,native,r.lease) then return false,'fire_restore_failed' end
+            state.fire_records[id]=nil
+        end
+    end
+    state.fire_paused=paused
+    return true
+end
+
+function M.apply(api,game,exe,state)
+    local ok,rows,reason=pcall(M.snapshot,api,game)
+    if not ok then return false,tostring(rows),false end
+    if #rows==0 and not state.native then return true,reason,false end
+    if not state.native then
+        for _,s in ipairs(signatures) do
+            local expected=fromhex(s[2])
+            assert(api.read(game+s[1],#expected)==expected,'Unsupported native sentry setter')
+        end
+        local pose_signature=fromhex('40534883ec204863dae8f20eeaff488bc84c8b0041ff90e8')
+        assert(exe and api.read(exe+0x1fcb50,#pose_signature)==pose_signature,'Unsupported engine pose getter')
+        state.native=api.bind(game,exe)
+    end
+    for _,s in ipairs(rows) do
+        if s.fire then
+            assert(fire_identity(api,s),'Fire pose identity changed')
+            s.fire.pose=state.native.pose(s.fire.unit,s.fire.node)
+        end
+    end
+    local accepted,why=M.fire_step(api,state.native,rows,state,api.time())
+    if not accepted then return false,why,false end
+    local accepted,why,active=M.step(api,state.native,rows,state)
+    if accepted and state.fire_paused>0 then return true,'sweep_paused',true end
+    return accepted,why,active
+end
+
+function M.stop(api,game,exe,state)
+    local ok=true
+    for id,r in pairs(state.fire_records or {}) do
+        if not r.lease or M.release_fire(api,state.native,r.lease) then state.fire_records[id]=nil
+        else ok=false end
+    end
+    for id,record in pairs(state.records or {}) do
+        if record.lease then
+            local restored=M.release(api,state.native,record.lease)
+            if restored then state.records[id]=nil else ok=false end
+        else state.records[id]=nil end
+    end
+    return ok
+end
+return M

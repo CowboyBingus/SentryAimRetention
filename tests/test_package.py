@@ -1,0 +1,37 @@
+"""Check the manager option and sole Lua resource; no boot or native payload."""
+import hashlib
+import json
+from pathlib import Path
+import struct
+import sys
+import zipfile
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+from archive import ARCHIVE,resource_hash
+with zipfile.ZipFile(sys.argv[1]) as z:
+    expected={f'data/{ARCHIVE}{s}' for s in ('','.stream','.gpu_resources')}
+    expected|={'manifest.json','SentryAimRetention-manifest.json','SentryAimRetention-README.txt','thumbnail.png'}
+    assert set(z.namelist())==expected and len(z.namelist())==len(expected)
+    manager=json.loads(z.read('manifest.json'))
+    assert manager['Version']==1 and manager['Guid']=='2c158cef-8455-461c-8113-6a207a60b692'
+    assert manager['Name']=='Sentry Aim Retention' and len(manager['Options'])==1
+    assert manager['IconPath']==manager['Options'][0]['Image']=='thumbnail.png'
+    assert manager['Options'][0]['Include']==['data'] and 'Experimental' in manager['Description']
+    p=json.loads(z.read('SentryAimRetention-manifest.json'))
+    assert p['revision']=='data-v2' and p['runtime_verified'] is False
+    assert p['sweep_policy']['pause_degrees']==[12,8]
+    assert p['requires']==[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v6'}]
+    for name,digest in p['files'].items(): assert hashlib.sha256(z.read(name)).hexdigest().upper()==digest
+    a=z.read('data/'+ARCHIVE)
+    assert struct.unpack_from('<III',a)==(0xf0000011,1,1)
+    e=struct.unpack_from('<7Q6I',a,104)
+    assert e[0]==resource_hash('mods/cowboybingus/sentry_aim_retention') and e[1]==0xa14e8dfa2cd117e2
+    body=a[e[2]:e[2]+e[7]]
+    assert struct.unpack_from('<II',body)==(len(body)-8,2) and body[8:13]==b'\x1bLJ\x02\x02'
+    for s in ('.stream','.gpu_resources'):assert z.read('data/'+ARCHIVE+s)==b''
+    for name in z.namelist():
+        if name.endswith('.png'): continue
+        raw=z.read(name).lower()
+        for forbidden in (b'virtualalloc',b'virtualprotect',b'flushinstructioncache',b'createremotethread',
+                          b'loadlibrary',b'users\\',b'users/'):
+            assert forbidden not in raw,(name,forbidden)
+print('PASS: Arsenal manifest, unique gameplay resource, loader dependency, hashes and no native/boot payload')
