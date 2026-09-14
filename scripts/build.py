@@ -12,6 +12,7 @@ from package import package_release
 
 MODULE='mods/cowboybingus/sentry_aim_retention'
 REVISION='data-v2'
+VERSION='1.0.0'
 def run(args,**kwargs):
     p=subprocess.run(list(map(str,args)),capture_output=True,text=True,**kwargs)
     if p.returncode: raise RuntimeError(p.stdout+p.stderr)
@@ -35,13 +36,13 @@ def main():
     (build/ARCHIVE).write_bytes(make_archive(resources))
     for suffix in ('.stream','.gpu_resources'): (build/(ARCHIVE+suffix)).write_bytes(b'')
     files={f'data/{ARCHIVE}{s}':f'build/{ARCHIVE}{s}' for s in ('','.stream','.gpu_resources')}
-    report={'name':'Sentry Aim Retention','slug':'SentryAimRetention','revision':REVISION,
+    report={'name':'Sentry Aim Retention','slug':'SentryAimRetention','revision':REVISION,'version':VERSION,
         'guid':'2c158cef-8455-461c-8113-6a207a60b692',
-        'description':'Experimental sentry aim retention with selective Gatling and machine-gun firing pauses during broad sweeps. Small adjustments can keep firing. Requires Bingus Shared Loader loader-v6 or newer / API 1.',
+        'description':'Sentry aim retention with selective Gatling and machine-gun firing pauses during broad sweeps. Small adjustments can keep firing. Requires Bingus Shared Loader loader-v6 or newer / API 1.',
         'game_exe_sha256':EXE_SHA,'game_dll_sha256':GAME_DLL_SHA,
         'deployment_files':files,'files':{p:sha((ROOT/p).read_bytes()) for p in files.values()},
         'requires':[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v6'}],
-        'module':MODULE,'runtime_verified':False,'status':'experimental_offline_verified_gameplay_pending',
+        'module':MODULE,'runtime_verified':False,'status':'release',
         'executable_memory_changed':False,'custom_dlls':0,'boot_replaced':False,
         'write':{'scope':'validated locally authoritative autonomous sentry instances',
             'direct_bytes_per_hold':24,'direct_fields':['last raw aim','last computed aim'],
@@ -67,5 +68,5 @@ def main():
     report['release']={'path':os.path.relpath(release,ROOT),'sha256':sha(release.read_bytes())}
     (build/'build-report.json').write_text(json.dumps(report,indent=2)+'\n')
     (build/'offline-tests.txt').write_text(tests)
-    print(tests.strip());print('Built '+str(release)+'; experimental, gameplay validation pending.')
+    print(tests.strip());print('Built '+str(release)+'; full release '+VERSION+'.')
 if __name__=='__main__':main()

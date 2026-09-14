@@ -29,6 +29,7 @@ def package_release(root: Path, build: Path, report: dict) -> Path:
         files['thumbnail.png'] = thumbnail.read_bytes()
     provenance = {
         'name': report['name'], 'revision': report['revision'],
+        'version': report['version'], 'status': report['status'],
         'steam_build': 24826606, 'exe_version': '1.8.45317.0',
         'game_exe_sha256': report['game_exe_sha256'],
         'game_dll_sha256': report['game_dll_sha256'],

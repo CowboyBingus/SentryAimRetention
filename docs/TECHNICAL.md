@@ -1,6 +1,6 @@
 # Implementation and validation
 
-The experimental gameplay module uses Bingus Shared Loader loader-v6 or newer, API 1 or newer. It supports Steam build 24826606 / EXE 1.8.45317.0 and verifies both native module hashes. Earlier loaders do not discover the sentry module, even if its archive is installed. Confirm activation in the loader log after replacing the loader and deploying.
+The gameplay module uses Bingus Shared Loader loader-v6 or newer, API 1 or newer. It supports Steam build 24826606 / EXE 1.8.45317.0 and verifies both native module hashes. Earlier loaders do not discover the sentry module, even if its archive is installed. Confirm activation in the loader log after replacing the loader and deploying.
 
 The targeting, behavior and turret registries identify seven autonomous sentry resource profiles. The module samples the current target and aim on both sides of the existing Lua update callback. After a tracked target disappears, it requests the native retention flag, temporarily sets both rotation speeds to zero and restores the last sampled raw/computed aim. Replacement targets release the hold. The saved per-instance turn speeds are restored when the hold ends.
 
@@ -10,7 +10,7 @@ Only validated, locally authoritative sentry instances are eligible. Entity mapp
 
 The native zero-speed branches skip both angular and animation writes. Offline evidence does not establish that this preserves the visible barrel pose or projectile direction. The sampled aim is a tracked point, not a directly measured last-shot bearing. Lua/native scheduling may allow the first unwanted turn or shot before a hold is acquired. The `late_aim` counter indicates a changed aim before interception; it cannot establish whether a shot occurred.
 
-Regression checks cover target loss, reacquisition, inferred scanning, control ownership, customized-speed restoration, component relocation, partial writes, shutdown, loader failures and memory protections. The anonymized Gatling fixture checks decisions through eight losses and releases. These checks do not prove live firing behavior, machine-gun acquisition, non-Gatling combat, or multiplayer authority transitions. In-game validation remains pending; the package is experimental.
+Regression checks cover target loss, reacquisition, inferred scanning, control ownership, customized-speed restoration, component relocation, partial writes, shutdown, loader failures and memory protections. The anonymized Gatling fixture checks decisions through eight losses and releases. These checks do not prove live firing behavior, machine-gun acquisition, non-Gatling combat, or multiplayer authority transitions. In-game validation remains pending.
 
 The fixture keeps the observed ordering and vector relationships, with remapped entity identifiers and normalized time. It contains no process addresses, player identifiers, machine details or source capture path. Raw research material is not distributed.
 
@@ -61,4 +61,4 @@ native signatures remain required; executable memory is never modified.
 Other sentry profiles retain the existing target-loss behavior. Their firing
 controls or ballistic aim relationships are not yet validated for this gate.
 Lua/native ordering may permit a first unwanted shot before interception; an
-in-game test of this candidate is required before claiming the sweep is fixed.
+in-game test of this module is required before claiming the sweep is fixed.

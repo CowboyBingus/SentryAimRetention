@@ -15,9 +15,10 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     assert manager['Version']==1 and manager['Guid']=='2c158cef-8455-461c-8113-6a207a60b692'
     assert manager['Name']=='Sentry Aim Retention' and len(manager['Options'])==1
     assert manager['IconPath']==manager['Options'][0]['Image']=='thumbnail.png'
-    assert manager['Options'][0]['Include']==['data'] and 'Experimental' in manager['Description']
+    assert manager['Options'][0]['Include']==['data'] and 'experimental' not in manager['Description'].lower()
     p=json.loads(z.read('SentryAimRetention-manifest.json'))
     assert p['revision']=='data-v2' and p['runtime_verified'] is False
+    assert p['version']=='1.0.0' and p['status']=='release'
     assert p['sweep_policy']['pause_degrees']==[12,8]
     assert p['requires']==[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v6'}]
     for name,digest in p['files'].items(): assert hashlib.sha256(z.read(name)).hexdigest().upper()==digest

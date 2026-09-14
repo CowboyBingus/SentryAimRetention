@@ -1,11 +1,12 @@
-Sentry Aim Retention - data-v2 (experimental)
+Sentry Aim Retention - 1.0.0
 Requires Bingus Shared Loader loader-v6 or newer / API 1.
 Supported game: Steam build 24826606 / EXE 1.8.45317.0.
 
 INSTALL WITH ARSENAL OR HD2MM
 1. Close Helldivers 2.
-2. Replace the older Bingus Shared Loader package with the accompanying
-   BingusSharedLoader.zip. Keep one enabled loader entry.
+2. Install BingusSharedLoader.zip (loader-v6 or newer) from:
+   https://github.com/CowboyBingus/BingusSharedLoader/releases/latest
+   Keep one enabled loader entry.
 3. Import SentryAimRetention.zip and enable its single option.
 4. In Arsenal's default priority mode, put Bingus Shared Loader LAST.
    If first-mod priority is enabled, put the loader FIRST instead.
@@ -38,10 +39,10 @@ and projectile spin-up countdown untouched. The sweep gate currently covers
 Gatling and machine-gun sentries; the other profiles receive aim retention only.
 
 VALIDATION STATUS
-Experimental build. Captured combat confirms Gatling rounds emitted through
+Captured combat confirms Gatling rounds emitted through
 large target-handoff turns. Offline replay checks the selective pause decisions,
 including broad turns, small adjustments and resuming fire. Live behavior with
-this candidate installed and multiplayer authority transitions remain pending.
+this module installed and multiplayer authority transitions remain pending.
 The scan transition is inferred from observed behavior-node and aim changes.
 Lua/native scheduling can still permit a first unwanted shot before interception.
 
