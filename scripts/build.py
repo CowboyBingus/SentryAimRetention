@@ -12,7 +12,7 @@ from package import package_release
 
 MODULE='mods/cowboybingus/sentry_aim_retention'
 REVISION='data-v2'
-VERSION='1.0.0'
+VERSION='1.0.1'
 def run(args,**kwargs):
     p=subprocess.run(list(map(str,args)),capture_output=True,text=True,**kwargs)
     if p.returncode: raise RuntimeError(p.stdout+p.stderr)

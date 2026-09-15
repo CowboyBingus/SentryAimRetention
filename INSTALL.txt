@@ -1,4 +1,4 @@
-Sentry Aim Retention - v1.0.0
+Sentry Aim Retention - v1.0.1
 Requires Bingus Shared Loader loader-v6 or newer / API 1.
 Supported game: Steam build 24826606 / EXE 1.8.45317.0.
 
@@ -7,7 +7,7 @@ INSTALL WITH ARSENAL OR HD2MM
 2. Install Bingus-Shared-Loader-v9.zip (loader-v6 or newer) from:
    https://github.com/CowboyBingus/BingusSharedLoader/releases/latest
    Keep one enabled loader entry.
-3. Import Sentry-Aim-Retention-v1.0.0.zip and enable its single option.
+3. Import Sentry-Aim-Retention-v1.0.1.zip and enable its single option.
 4. In Arsenal's default priority mode, put Bingus Shared Loader LAST.
    If first-mod priority is enabled, put the loader FIRST instead.
 5. Purge and Deploy, then launch the game.
