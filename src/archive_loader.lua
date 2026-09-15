@@ -2,7 +2,7 @@ return function(create_api,patch,build)
     if rawget(_G,'SentryAimRetention') then return end
     local state={revision=build.revision,active=false,updates=0,polls=0,
         observed=0,holding=0,holds=0,releases=0,late_aim=0,records={},
-        fire_paused=0,fire_pauses=0,fire_resumes=0,fire_records={}}
+        fire_paused=0,fire_pauses=0,fire_resumes=0,fire_records={},reselections=0}
     rawset(_G,'SentryAimRetention',state)
     local api,game,exe,last_log
     local function report(status,active,force)
@@ -16,12 +16,19 @@ return function(create_api,patch,build)
             local file=io.open(directory..'/SentryAimRetention.log','w');if not file then return end
             file:write(build.revision..'\n'..status..'\n')
             for _,key in ipairs({'updates','polls','observed','holding','holds','releases','late_aim',
-                'fire_paused','fire_pauses','fire_resumes'}) do
+                'fire_paused','fire_pauses','fire_resumes','reselections'}) do
                 file:write(key..'='..tostring(state[key])..'\n')
             end
             for id,r in pairs(state.fire_records) do
-                file:write(string.format('fire_sentry=%d paused=%s error_degrees=%.2f\n',
-                    id,tostring(r.lease~=nil),r.error or 0))
+                file:write(string.format('fire_sentry=%d paused=%s error_degrees=%.2f reason=%s terrain=%s synced=%s travel_degrees=%.2f target=%d runtime_target=%d\n',
+                    id,tostring(r.lease~=nil),r.error or 0,r.reason or 'tracking_or_settling',tostring(r.terrain_blocked),
+                    tostring(r.synced),r.travel or 0,r.snapshot.target,r.snapshot.runtime_target))
+                if r.query then
+                    local q=r.query
+                    file:write(string.format('clearance=%s hit_unit=%s target_unit=%s hit_distance=%.3f target_distance=%.3f hit_actor=%s age=%.3f hit_filter=%s\n',
+                        q.reason,tostring(q.hit_unit),tostring(q.target_unit),q.distance or 0,q.length or 0,
+                        tostring(q.hit_actor),r.terrain_age or 0,q.filter and string.format('%08x',q.filter) or 'unknown'))
+                end
             end
             for id,r in pairs(state.records) do
                 local s=r.latest or r.snapshot

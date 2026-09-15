@@ -114,12 +114,115 @@ return function()
         if not ok then error(result) end
         return result
     end
+    -- Private-buffer adapter, also exercised with a synthetic terrain query.
+    function api.cast_terrain(raycast,id,unit,origin,target,target_unit,actor_filter)
+        local from,to,dir=ffi.new('float[3]'),ffi.new('float[3]'),ffi.new('float[3]')
+        assert(#origin==12 and #target==12,'Invalid terrain ray points')
+        ffi.copy(from,origin,12);ffi.copy(to,target,12)
+        local length=0
+        for i=0,2 do
+            local delta=tonumber(to[i]-from[i])
+            assert(delta==delta and math.abs(delta)<100000,'Invalid terrain ray')
+            dir[i]=delta;length=length+delta*delta
+        end
+        length=math.sqrt(length)
+        if length<0.05 then return false end
+        assert(length<2000,'Terrain ray outside sentry range')
+        for i=0,2 do dir[i]=dir[i]/length end
+        assert(id>=0 and id<4,'Invalid physics world')
+        -- Match the native static-obstacle preset: closest collection, actor
+        -- class 3, damage filter and flags 0x80000009. The native filter admits
+        -- only bodies with the static bit. Character/ragdoll volumes, including
+        -- initial overlaps around the muzzle, must not act as a firing veto.
+        local function query(collection,capacity)
+            local out=ffi.new('uint32_t[?]',11*capacity)
+            local count=tonumber(raycast(id,from,dir,length,collection,3,0x393d9518,0x80000009,unit,out,capacity))
+            assert(count and count>=0 and count==math.floor(count),'Invalid terrain hit count')
+            return out,count
+        end
+        local function classify(out,index)
+            local hit=out+11*index
+            local distance=tonumber(ffi.cast('float *',hit)[6])
+            assert(distance==distance and distance>=0 and distance<=length+0.05,'Invalid terrain hit')
+            local hit_unit,actor=tonumber(hit[7]),tonumber(hit[8])
+            local detail={hit_unit=hit_unit,hit_actor=actor,target_unit=target_unit,distance=distance,length=length}
+            if target_unit and hit_unit==target_unit then detail.reason='target_surface';return false,detail end
+            -- A surface endpoint is legal; only geometry before it can veto.
+            if distance>=length-0.05 then detail.reason='endpoint';return false,detail end
+            detail.filter=actor_filter and actor_filter(actor,hit_unit) or nil
+            if detail.filter==0x04a8fbf9 then
+                -- Native destructible cover includes fences. A collision here
+                -- does not prove that the weapon cannot penetrate/destroy it.
+                detail.reason='destructible_cover';return false,detail
+            end
+            detail.reason='static_obstruction';return true,detail
+        end
+        local out,count=query(1,1)
+        if count==0 then return false,{reason='clear'} end
+        local blocked,detail=classify(out,0)
+        if detail.reason~='destructible_cover' then return blocked,detail end
+        -- Do not ignore the entire unit or stop at its first surface: solid
+        -- terrain can sit behind a fence, including within the same unit.
+        local capacity=32
+        out,count=query(2,capacity)
+        local nearest,cover
+        for i=0,math.min(count,capacity)-1 do
+            local solid,hit=classify(out,i)
+            if solid and (not nearest or hit.distance<nearest.distance) then nearest=hit end
+            if hit.reason=='destructible_cover' then cover=cover or hit end
+        end
+        if nearest then return true,nearest end
+        -- A truncated result cannot establish obstruction. Leave that case to
+        -- native ballistics instead of latching an unproven permanent pause.
+        if count>capacity then return false,{reason='cover_query_limit',hits=count} end
+        return false,cover or {reason='clear'}
+    end
+    function api.actor_filter(exe,actor,unit)
+        -- Read the native actor/body mapping. Never dereference an unchecked
+        -- actor handle or infer cover type from a recycled body index.
+        local function uint(b,o)
+            if not b then return nil end
+            local v=ffi.new('uint32_t[1]');ffi.copy(v,b:sub(o+1,o+4),4);return tonumber(v[0])
+        end
+        local function ptr(a)return api.pointer(api.read(a,8))end
+        local bit=require('bit')
+        local world_index=math.floor(actor/0x40000000)
+        local pool=exe+0x236db80+64*(math.floor(actor/0x10000000)%4+10*world_index)
+        local h=api.read(pool,56);if not h then return nil end
+        local layout=uint(h,28);local stride=layout%65536
+        local identity=math.floor(layout/65536)%256;local offset=math.floor(layout/0x1000000)
+        local index=bit.band(actor,uint(h,40));local base=api.pointer(h)
+        if not base or index<0 or index>=uint(h,36) or bit.band(actor,uint(h,52))==0
+            or stride<40 or stride>512 or identity+4>stride or offset+40>stride then return nil end
+        local entry=base+index*stride;local key=api.read(entry+identity,4)
+        if uint(key,0)~=actor then return nil end
+        local record=api.read(entry+offset,40)
+        if not record or uint(record,12)~=unit then return nil end
+        local world_slot=exe+0x27be808+176*world_index;local world=ptr(world_slot)
+        if not world then return nil end
+        local bodies=ptr(world+24);local body_index=bit.band(uint(record,20),0xffffff)
+        if not bodies or body_index>=262144 then return nil end
+        local address=bodies+160*body_index;local body=api.read(address,160)
+        if not body or uint(body,144)~=actor or uint(body,148)~=unit then return nil end
+        local properties=ptr(exe+0x27c9d28);if not properties then return nil end
+        local count=uint(api.read(properties+248,4),0);local names=ptr(properties+256)
+        local filter=bit.band(uint(body,108),127)
+        if not count or count>128 or filter>=count or not names then return nil end
+        local name=api.read(names+4*filter,4)
+        if api.read(pool,56)~=h or api.read(entry+identity,4)~=key or api.read(entry+offset,40)~=record
+            or ptr(world_slot)~=world or ptr(world+24)~=bodies or api.read(address,160)~=body
+            or ptr(exe+0x27c9d28)~=properties or ptr(properties+256)~=names
+            or uint(api.read(properties+248,4),0)~=count or api.read(names+4*filter,4)~=name then return nil end
+        return uint(name,0)
+    end
     function api.bind(game,exe)
         -- Signatures and entity/record identity are checked before each call.
         local flag = ffi.cast('void (*)(void *, uint32_t, uint32_t, uint8_t)',game+0x6b7f20)
         local horizontal = ffi.cast('void (*)(void *, float)',game+0xf2b450)
         local vertical = ffi.cast('void (*)(void *, float)',game+0xf2b360)
         local mode = ffi.cast('void (*)(void *, uint32_t, uint32_t)',game+0x74ddf0)
+        local world_id = ffi.cast('uint32_t (*)(const void *)',exe+0x7a48f0)
+        local raycast = ffi.cast('uint32_t (*)(uint32_t, const void *, const void *, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, void *, uint32_t)',exe+0x7f95c0)
         local function ptr(address)
             return assert(api.pointer(api.read(address,8)),'Pose pointer unavailable')
         end
@@ -132,6 +235,19 @@ return function()
             horizontal=function(entity,speed) horizontal(entity,speed) end,
             vertical=function(entity,speed) vertical(entity,speed) end,
             fire_mode=function(manager,id,value) mode(manager,id,value) end,
+            terrain_path=function(unit,origin,target,target_unit)
+                -- The native ray workers use this scheduler. Query only after
+                -- consumption, using private inputs/output; never enqueue work.
+                local scheduler=api.pointer(api.read(game+0x2780698,8))
+                local world=api.pointer(api.read(game+0x276f0c8,8))
+                if not scheduler or not world or uint(scheduler)~=0 then return nil end
+                local jobs=api.read(scheduler+0x40008,288)
+                if not jobs then return nil end
+                local data=ffi.new('uint32_t[72]');ffi.copy(data,jobs,288)
+                for i=0,23 do if data[3*i+2]~=1 then return nil end end
+                return api.cast_terrain(raycast,tonumber(world_id(world)),unit,origin,target,target_unit,
+                    function(actor,owner)return api.actor_filter(exe,actor,owner)end)
+            end,
             pose=function(unit,node)
                 -- Read the same matrix selected by UnitApi.world_pose, without
                 -- invoking an engine virtual function on a possibly stale unit.

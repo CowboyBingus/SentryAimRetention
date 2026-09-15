@@ -126,6 +126,24 @@ test('compaction follows the same entity and preserves customized restore values
     assert(M.stop(api,nil,nil,state));relocated=fresh(relocated)
     assert(relocated.flags==0 and relocated.horizontal==number(150) and relocated.vertical==number(90))
 end)
+
+test('map replacement without moving component slots cannot orphan an aim hold',function()
+    for _,release in ipairs({'target','scan','shutdown'})do
+        local api,native,new,fresh,put=fixture();local state={native=native};local s=new(1)
+        put(90000,'old map!');s.guards[2]={address=90000,bytes='old map!'}
+        M.step(api,native,{s},state);s.target=0;s.has=false;M.step(api,native,{s},state)
+        s=fresh(s)
+        -- Native hash-table allocation changed, but all component data addresses
+        -- and the sentry instance remained the same.
+        put(90000,'new map!');s.guards={s.guards[1],{address=90000,bytes='new map!'}}
+        if release=='target' then s.target=88;s.has=true;s.source_flags=3
+        elseif release=='scan' then s.has=true;s.node=2;s.source_flags=32;s.point=vec(1,3,2) end
+        assert(M.step(api,native,{s},state))
+        if release=='shutdown' then assert(M.stop(api,nil,nil,state))end
+        s=fresh(s)
+        assert(s.flags==0 and s.horizontal==number(150) and s.vertical==number(90))
+    end
+end)
 test('native speed changes are preserved when control is reclaimed',function()
     local api,native,new,fresh,put=fixture();local state={native=native};local s=new(1)
     M.step(api,native,{s},state);s.target=0;M.step(api,native,{s},state)

@@ -15,7 +15,13 @@ local function fixture()
     function api.bind()error('Unvalidated native binding')end
     zero(tm,392);zero(bm,112);zero(rm,96);zero(entity,24);zero(rt,208);zero(nt,24);zero(behavior,496);zero(control,16)
     p(game+0x276ca40,tm);p(game+0x276c470,bm);p(game+0x276ca80,rm)
+    p(game+0x276c068,0x990000);p(0x990018,1000000);p(behavior+152,1700000)
     zero(wm,104);zero(cm,96);p(game+0x276c9f0,wm);p(game+0x276c390,cm)
+    local fm=0x950000;zero(fm+73808,32);p(game+0x276c9c8,fm)
+    p(fm+73808,0x980000);w(fm+73816,8);w(fm+73820,0);w(fm+73824,2)
+    zero(0x980000,64);w(0x980010,77);w(0x980014,0)
+    p(fm+73832,0x970000);p(0x970000,0x971000);zero(0x971000,20)
+    w(0x971008,77);w(0x97100c,222)
     w(tm+308,384);w(tm+320,1);w(tm+324,1)
     w(bm+32,1024);w(rm+8,64);w(rm+20,1);w(rm+24,1)
     for _,spec in ipairs({{tm,336,360,0x810000},{bm,64,88,0x820000},{rm,40,64,0x830000},
@@ -36,7 +42,33 @@ local rows=M.snapshot(api,g);assert(#rows==1)
 local s=rows[1];assert(s.id==9 and s.profile=='Gatling' and s.node==12 and s.target==77)
 assert(s.runtime_target==77 and s.flags==0 and s.enabled and s.has)
 assert(s.raw_address==a.rt+8 and s.flags_address==a.nt+16 and s.control_address==a.control)
-assert(s.fire.mode==1 and s.fire.node==15 and s.fire.trigger and s.fire.pause==12 and s.fire.resume==4)
+assert(s.fire.mode==1 and s.fire.node==15 and s.fire.trigger and s.fire.pause==16 and s.fire.resume==4)
+assert(s.fire.target_unit==222 and #s.fire.target_guards>0)
+assert(s.selection.address==a.behavior+152 and s.selection.now==1000000)
+assert(s.selection.deadline==bytes('uint64_t',1700000) and #s.selection.guards==1)
+do
+    local queried=false
+    local state={native={
+        pose=function()
+            return ffi.string(ffi.new('float[16]',{1,0,0,0,0,1,0,0,0,0,1,0,0,-20,0,1}),64)
+        end,
+        terrain_path=function(unit,origin,target,target_unit)
+            queried=true;assert(unit==1 and target==s.raw and #origin==12 and target_unit==222);return false
+        end,
+    }}
+    api.time=function()return 0 end
+    assert(M.apply(api,g,nil,state));assert(queried)
+end
+-- Target removal cannot invalidate restoration of the sentry's fire mode.
+do
+    local restored=false;local current=bytes('uint32_t',0);local read=api.read
+    w(0x971008,78)
+    api.read=function(address,size)if address==s.fire.mode_address then return current end;return read(address,size)end
+    api.writable_data=function()return true end
+    assert(M.release_fire(api,{fire_mode=function(_,_,mode)restored=true;current=bytes('uint32_t',mode)end},
+        {snapshot=s,mode=1}))
+    assert(restored);api.read=read;w(0x971008,77)
+end
 local count=0;for _ in pairs(M.profiles)do count=count+1 end;assert(count==7)
 put(a.entity+20,'\0');assert(#M.snapshot(api,g)==0)
 put(a.entity+20,'\3');assert(#M.snapshot(api,g)==0)

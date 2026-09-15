@@ -5,11 +5,12 @@ from pathlib import Path
 import zipfile
 from privacy_audit import ROOT, SOURCE_FILES, audit
 from package import release_directory
+from build import VERSION
 
 
 def main():
-    audit(release_directory(ROOT)/'SentryAimRetention.zip')
-    destination=release_directory(ROOT)/'SentryAimRetention-source.zip'
+    audit(release_directory(ROOT)/f'Sentry-Aim-Retention-v{VERSION}.zip')
+    destination=release_directory(ROOT)/f'Sentry-Aim-Retention-v{VERSION}-source.zip'
     destination.parent.mkdir(exist_ok=True)
     pending=ROOT/'build/source.pending.zip'
     with zipfile.ZipFile(pending,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
