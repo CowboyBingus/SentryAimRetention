@@ -12,8 +12,8 @@ return function(create_api,patch,build)
         last_log=now
         if force then print('[SentryAimRetention] '..build.revision..': '..status) end
         pcall(function()
-            local directory=os.getenv('LOCALAPPDATA');if not directory then return end
-            local file=io.open(directory..'/SentryAimRetention.log','w');if not file then return end
+            local logger=rawget(_G,'CowboyBingusModLoader')
+            local file=logger and logger.open_log and logger.open_log('SentryAimRetention.log');if not file then return end
             file:write(build.revision..'\n'..status..'\n')
             for _,key in ipairs({'updates','polls','observed','holding','holds','releases','late_aim',
                 'fire_paused','fire_pauses','fire_resumes','reselections'}) do

@@ -11,8 +11,8 @@ from module import build_module
 from package import package_release
 
 MODULE='mods/cowboybingus/sentry_aim_retention'
-REVISION='data-v8'
-VERSION='1.0.7'
+REVISION='data-v8.1'
+VERSION='1.0.8'
 def run(args,**kwargs):
     p=subprocess.run(list(map(str,args)),capture_output=True,text=True,**kwargs)
     if p.returncode: raise RuntimeError(p.stdout+p.stderr)
@@ -41,7 +41,7 @@ def main():
         'description':'Retains sentry aim; pauses Gatling and machine-gun shots during broad sweeps, target loss and terrain-obstructed aim. Small adjustments can keep firing. Requires Bingus Shared Loader v6 or newer / API 1.',
         'game_exe_sha256':EXE_SHA,'game_dll_sha256':GAME_DLL_SHA,
         'deployment_files':files,'files':{p:sha((ROOT/p).read_bytes()) for p in files.values()},
-        'requires':[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v6'}],
+        'requires':[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v14'}],
         'module':MODULE,'runtime_verified':False,'status':'release',
         'executable_memory_changed':False,'custom_dlls':0,'boot_replaced':False,
         'write':{'scope':'validated locally authoritative autonomous sentry instances',

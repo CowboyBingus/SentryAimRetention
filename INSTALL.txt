@@ -1,75 +1,160 @@
-Sentry Aim Retention - v1.0.7
-Requires Bingus Shared Loader loader-v6 or newer / API 1.
+TEST BUILD: mission-mode and centralized-log corrections. In-game validation pending.
+
+Requires Bingus Shared Loader v14 for the shared log folder.
+
+Logs: %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs
+
+
+
+Sentry Aim Retention - v1.0.8
+
+Requires Bingus Shared Loader loader-v14 or newer / API 1.
+
 Supported game: Steam build 24826606 / EXE 1.8.45317.0.
 
+
+
 INSTALL WITH ARSENAL OR HD2MM
+
 1. Close Helldivers 2.
-2. Install Bingus-Shared-Loader-v9.zip (loader-v6 or newer) from:
+
+2. Install Bingus-Shared-Loader-v14.zip (loader-v6 or newer) from:
+
    https://github.com/CowboyBingus/BingusSharedLoader/releases/latest
+
    Keep one enabled loader entry.
-3. Import Sentry-Aim-Retention-v1.0.7.zip and enable its single option.
+
+3. Import Sentry-Aim-Retention-v1.0.8.zip and enable its single option.
+
 4. In Arsenal's default priority mode, put Bingus Shared Loader LAST.
+
    If first-mod priority is enabled, put the loader FIRST instead.
+
 5. Purge and Deploy, then launch the game.
 
+
+
 Other CowboyBingus gameplay modules remain optional. The mod contains one Lua
+
 resource and does not replace boot or Wwise. The shared loader preserves the
+
 original Wwise callbacks and retains its existing Overlay v2 integration.
 
+
+
 BEHAVIOR
+
 After an autonomous sentry loses its target, retain its last tracked aim and
+
 temporarily stop both turn axes. Allow a replacement target immediately.
+
 Release for a changed, nonzero explicit scan point from a different native
+
 behavior node. The dead-target fallback and zero-point transition keep the hold.
+
 Restore the instance's saved turn speeds, including customizations.
 
+
+
 Includes resource profiles for Gatling, machine gun, laser cannon, rocket,
+
 flamethrower, mortar and EMS mortar. Native ownership gates restrict changes
+
 to locally authoritative instances. Manned turrets and enemy turrets are excluded.
 
+
+
 SELECTIVE FIRING PAUSES
+
 Gatling: allow up to 16 degrees of aim error; resume broad turns within 4 degrees.
+
 Machine gun: allow up to 14 degrees; resume broad turns within 3 degrees.
+
 Broad turns and obstruction pauses require 60 milliseconds of settled aim.
+
 An unsettled firing sweep is also limited to 200 milliseconds. Nearby target
+
 changes and normal tracking can keep firing. Target loss pauses residual shots,
+
 even while aim is held. A close replacement may resume immediately with a fresh
+
 clear path and synchronized aim, provided no broad turn or obstruction occurred
+
 during the pause. Paused time does not consume the firing sweep's time budget.
+
 Shots also pause while the selected target and the aiming system's target differ.
+
 On target loss during the firing state, request one native target search sooner
+
 instead of waiting out the usual one-second timer. Accelerated searches are at
+
 least 100 milliseconds apart. Native target choice and targeting checks remain.
+
 Static terrain between the muzzle and the target point also pauses shots.
+
 Character and ragdoll collision volumes do not count as static obstacles.
+
 Destructible cover, including fences in that collision class, does not veto
+
 firing. Normal weapon handling decides penetration and destruction. The mod
+
 also checks beyond that cover for solid terrain rather than ignoring its unit.
+
 Exposed low targets remain eligible; a clear path and settled aim restore firing.
 
+
+
 The module uses the native no-fire mode to pause shots. It leaves the AI trigger
+
 and projectile spin-up countdown untouched. The sweep gate currently covers
+
 Gatling and machine-gun sentries; the other profiles receive aim retention only.
 
+
+
 VALIDATION STATUS
+
 Captured combat confirms Gatling rounds emitted through
+
 large target-handoff turns. Offline replay checks the selective pause decisions,
+
 including broad turns, small adjustments and resuming fire. Live behavior with
+
 this module installed and multiplayer authority transitions remain pending.
+
 The scan transition is inferred from observed behavior-node and aim changes.
+
 Lua/native scheduling can still permit a first unwanted shot before interception.
 
+
+
 DIAGNOSTICS
-Check %LOCALAPPDATA%/BingusSharedLoader.log for the module load result.
+
+Check %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/BingusSharedLoader.log for the module load result.
+
 The header must say loader-v6 or newer and sentry_aim_retention must say loaded.
-Check %LOCALAPPDATA%/SentryAimRetention.log for a data-v8 header and the
+
+Check %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/SentryAimRetention.log for a data-v8.1 header and the
+
 fire_paused, fire_pauses, fire_resumes and reselections counters. Per-sentry firing entries
+
 include the muzzle-to-aim error, accumulated turn, target synchronization,
+
 pause reason and collision result. Clearance
+
 entries identify the hit unit/actor, selected target unit, hit/target distances
+
 and collision filter, and the age of the latest completed query. Existing holds, releases and late_aim counters
+
 remain available. Logs refresh at most every two seconds during normal updates.
 
+
+
 UNINSTALL
+
 Close the game, disable/remove Sentry Aim Retention, then Purge and Deploy.
+
 Keep Bingus Shared Loader enabled for any other dependent mods.
+
+Logs: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs
+Requires Bingus Shared Loader v14 or newer for this log folder.

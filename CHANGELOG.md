@@ -1,3 +1,8 @@
+# v1.0.8
+
+- Moves logs to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs`.
+- Requires Bingus Shared Loader v14 for the shared log folder.
+
 # Changes since v1.0.0
 
 - Reduced pauses between nearby enemies: Gatling sentries can keep firing through adjustments up to 16 degrees, and machine-gun sentries up to 14 degrees, increased from 12 and 8 degrees.

@@ -13,12 +13,12 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     assert set(z.namelist())==expected and len(z.namelist())==len(expected)
     manager=json.loads(z.read('manifest.json'))
     assert manager['Version']==1 and manager['Guid']=='2c158cef-8455-461c-8113-6a207a60b692'
-    assert manager['Name']=='Sentry Aim Retention - v1.0.7' and len(manager['Options'])==1
+    assert manager['Name']=='Sentry Aim Retention - v1.0.8' and len(manager['Options'])==1
     assert manager['IconPath']==manager['Options'][0]['Image']=='thumbnail.png'
     assert manager['Options'][0]['Include']==['data'] and 'experimental' not in manager['Description'].lower()
     p=json.loads(z.read('SentryAimRetention-manifest.json'))
-    assert p['revision']=='data-v8' and p['runtime_verified'] is False
-    assert p['version']=='1.0.7' and p['status']=='release'
+    assert p['revision']=='data-v8.1' and p['runtime_verified'] is False
+    assert p['version']=='1.0.8' and p['status']=='release'
     assert p['sweep_policy']['pause_degrees']==[16,14]
     assert p['sweep_policy']['paused_time_consumes_sweep_budget'] is False
     assert p['sweep_policy']['close_reacquisition'].startswith('immediate after target-loss-only pause')
@@ -29,7 +29,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     assert p['target_policy']['requires_idle_native_ray_workers'] is True
     assert p['target_policy']['cover_followup_max_hits']==32
     assert '0x04a8fbf9' in p['target_policy']['destructible_cover']
-    assert p['requires']==[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v6'}]
+    assert p['requires']==[{'name':'Bingus Shared Loader','api':1,'revision':'loader-v14'}]
     for name,digest in p['files'].items(): assert hashlib.sha256(z.read(name)).hexdigest().upper()==digest
     a=z.read('data/'+ARCHIVE)
     assert struct.unpack_from('<III',a)==(0xf0000011,1,1)
