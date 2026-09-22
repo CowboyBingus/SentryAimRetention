@@ -1,0 +1,2 @@
+- Update compatibility for game build 25327279.
+- Restore sentry aim retention, target handoffs and firing checks.

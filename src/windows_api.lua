@@ -187,7 +187,7 @@ return function()
         local function ptr(a)return api.pointer(api.read(a,8))end
         local bit=require('bit')
         local world_index=math.floor(actor/0x40000000)
-        local pool=exe+0x236db80+64*(math.floor(actor/0x10000000)%4+10*world_index)
+        local pool=exe+0x2369b00+64*(math.floor(actor/0x10000000)%4+10*world_index)
         local h=api.read(pool,56);if not h then return nil end
         local layout=uint(h,28);local stride=layout%65536
         local identity=math.floor(layout/65536)%256;local offset=math.floor(layout/0x1000000)
@@ -198,31 +198,31 @@ return function()
         if uint(key,0)~=actor then return nil end
         local record=api.read(entry+offset,40)
         if not record or uint(record,12)~=unit then return nil end
-        local world_slot=exe+0x27be808+176*world_index;local world=ptr(world_slot)
+        local world_slot=exe+0x27ba8a8+176*world_index;local world=ptr(world_slot)
         if not world then return nil end
         local bodies=ptr(world+24);local body_index=bit.band(uint(record,20),0xffffff)
         if not bodies or body_index>=262144 then return nil end
         local address=bodies+160*body_index;local body=api.read(address,160)
         if not body or uint(body,144)~=actor or uint(body,148)~=unit then return nil end
-        local properties=ptr(exe+0x27c9d28);if not properties then return nil end
+        local properties=ptr(exe+0x27c5e48);if not properties then return nil end
         local count=uint(api.read(properties+248,4),0);local names=ptr(properties+256)
         local filter=bit.band(uint(body,108),127)
         if not count or count>128 or filter>=count or not names then return nil end
         local name=api.read(names+4*filter,4)
         if api.read(pool,56)~=h or api.read(entry+identity,4)~=key or api.read(entry+offset,40)~=record
             or ptr(world_slot)~=world or ptr(world+24)~=bodies or api.read(address,160)~=body
-            or ptr(exe+0x27c9d28)~=properties or ptr(properties+256)~=names
+            or ptr(exe+0x27c5e48)~=properties or ptr(properties+256)~=names
             or uint(api.read(properties+248,4),0)~=count or api.read(names+4*filter,4)~=name then return nil end
         return uint(name,0)
     end
     function api.bind(game,exe)
         -- Signatures and entity/record identity are checked before each call.
-        local flag = ffi.cast('void (*)(void *, uint32_t, uint32_t, uint8_t)',game+0x6b7f20)
-        local horizontal = ffi.cast('void (*)(void *, float)',game+0xf2b450)
-        local vertical = ffi.cast('void (*)(void *, float)',game+0xf2b360)
-        local mode = ffi.cast('void (*)(void *, uint32_t, uint32_t)',game+0x74ddf0)
-        local world_id = ffi.cast('uint32_t (*)(const void *)',exe+0x7a48f0)
-        local raycast = ffi.cast('uint32_t (*)(uint32_t, const void *, const void *, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, void *, uint32_t)',exe+0x7f95c0)
+        local flag = ffi.cast('void (*)(void *, uint32_t, uint32_t, uint8_t)',game+0x6bf390)
+        local horizontal = ffi.cast('void (*)(void *, float)',game+0x11cba20)
+        local vertical = ffi.cast('void (*)(void *, float)',game+0x11cb930)
+        local mode = ffi.cast('void (*)(void *, uint32_t, uint32_t)',game+0x755f90)
+        local world_id = ffi.cast('uint32_t (*)(const void *)',exe+0x79f860)
+        local raycast = ffi.cast('uint32_t (*)(uint32_t, const void *, const void *, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, void *, uint32_t)',exe+0x7f4590)
         local function ptr(address)
             return assert(api.pointer(api.read(address,8)),'Pose pointer unavailable')
         end
@@ -238,8 +238,8 @@ return function()
             terrain_path=function(unit,origin,target,target_unit)
                 -- The native ray workers use this scheduler. Query only after
                 -- consumption, using private inputs/output; never enqueue work.
-                local scheduler=api.pointer(api.read(game+0x2780698,8))
-                local world=api.pointer(api.read(game+0x276f0c8,8))
+                local scheduler=api.pointer(api.read(game+0x347d7e0,8))
+                local world=api.pointer(api.read(game+0x346bfa0,8))
                 if not scheduler or not world or uint(scheduler)~=0 then return nil end
                 local jobs=api.read(scheduler+0x40008,288)
                 if not jobs then return nil end
@@ -251,7 +251,7 @@ return function()
             pose=function(unit,node)
                 -- Read the same matrix selected by UnitApi.world_pose, without
                 -- invoking an engine virtual function on a possibly stale unit.
-                local units=ptr(exe+0x1a140f0);local index=unit%0x400000
+                local units=ptr(exe+0x1a100f0);local index=unit%0x400000
                 assert(index<uint(units+0x98),'Unit index unavailable')
                 local generations=ptr(units+0xa0)
                 local generation=string.char(math.floor(unit/0x400000)%256)

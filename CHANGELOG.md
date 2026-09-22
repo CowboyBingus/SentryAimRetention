@@ -1,3 +1,8 @@
+# v1.0.11
+
+- Update compatibility for game build 25327279.
+- Restore sentry aim retention, target handoffs and firing checks.
+
 # v1.0.9
 
 - Batch targeting-registry pointer reads to reduce per-update work.

@@ -1,3 +1,4 @@
+
 ![Sentry Aim Retention](assets/banner.png)
 
 # Sentry Aim Retention
@@ -12,4 +13,6 @@ Aims to keep autonomous sentries facing their last tracked target after losing i
 
 Aim retention applies to locally controlled Gatling, machine gun, laser cannon, rocket, flamethrower, mortar and EMS mortar sentries. Selective firing pauses apply to Gatling and machine-gun sentries.
 
-Release **v1.0.9** includes input/performance fixes. Offline checks cover this revision; in-game frame-time validation is pending. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.
+See [validation coverage](docs/MIGRATION_VALIDATION.md) for the scope of the release checks. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.
+
+Current version: **v1.0.11**, for game build **25327279**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).

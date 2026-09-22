@@ -20,21 +20,21 @@ local function nonzero(b) return f(b,0)~=0 or f(b,4)~=0 or f(b,8)~=0 end
 local function fromhex(h) return (h:gsub('..',function(p)return string.char(tonumber(p,16))end)) end
 -- Resource identity and BehaviorComponent defaults from this build's data.
 local profiles={
-    [fromhex('701de358cfd685ef')]={name='Gatling',behavior=212,fire_gate={pause=16,resume=4}},
-    [fromhex('bb26ba7638e4cd37')]={name='Machine gun',behavior=310,fire_gate={pause=14,resume=3}},
-    [fromhex('a8a8ffcf360f0756')]={name='Laser cannon',behavior=306},
-    [fromhex('c6e986dc68950737')]={name='Rocket',behavior=609},
-    [fromhex('582896febac30c82')]={name='Flamethrower',behavior=206},
-    [fromhex('742dce3b2e81a051')]={name='Mortar',behavior=317},
-    [fromhex('8b2f0938183a05b2')]={name='EMS mortar',behavior=321},
+    [fromhex('701de358cfd685ef')]={name='Gatling',behavior=213,fire_gate={pause=16,resume=4}},
+    [fromhex('bb26ba7638e4cd37')]={name='Machine gun',behavior=312,fire_gate={pause=14,resume=3}},
+    [fromhex('a8a8ffcf360f0756')]={name='Laser cannon',behavior=308},
+    [fromhex('c6e986dc68950737')]={name='Rocket',behavior=611},
+    [fromhex('582896febac30c82')]={name='Flamethrower',behavior=207},
+    [fromhex('742dce3b2e81a051')]={name='Mortar',behavior=319},
+    [fromhex('8b2f0938183a05b2')]={name='EMS mortar',behavior=323},
 }
 -- EMS mortar uses the same mechanism, with its own resource/profile identity.
 M.profiles=profiles
 local signatures={
-    {0x6b7f20,'405741574883ec283b1532ed0c02450fb6f94c8b15074b0b'},
-    {0xf2b360,'4883ec288b41083b05f3b885010f84d00000004c8b150617'},
-    {0xf2b450,'4883ec288b41083b0503b885010f84d00000004c8b151616'},
-    {0x74ddf0,'48894c24085355565741574883ec20'},
+    {0x6bf390,'405741574883ec283b158248dc02450fb6f94c8b158779c6'},
+    {0x11cb930,'4883ec288b41083b05e3822b020f84d00000004c8b1526b4'},
+    {0x11cba20,'4883ec288b41083b05f3812b020f84d00000004c8b1536b3'},
+    {0x755f90,'48894c24085355565741574883ec20'},
 }
 M.signatures=signatures
 local function matches(api,guards)
@@ -57,7 +57,7 @@ function M.snapshot(api,game)
         if b==string.rep('\0',8) then return nil end
         local p=pointer(b);roots[#roots+1]={address=game+rva,bytes=b};return p
     end
-    local tm,bm,rm=root(0x276ca40),root(0x276c470),root(0x276ca80)
+    local tm,bm,rm=root(0x3326d30),root(0x3326740),root(0x3326d70)
     if not tm or not bm or not rm then return {},'waiting_for_sentries' end
     local th=read(tm+308,84)
     local cap,total,active=u(th,0),u(th,12),u(th,16)
@@ -114,7 +114,7 @@ function M.snapshot(api,game)
                 local be=select(2,array(bm,88,bi,8,8))
                 local re=select(2,array(rm,64,ri,8,8))
                 assert(be==entity_pointer and re==entity_pointer,'Component identity mismatch')
-                local ba,behavior=array(bm,96,bi,496,160)
+                local ba,behavior=array(bm,96,bi,504,160)
                 local ca,control=array(rm,88,ri,16,16)
                 local runtime=read(rt+208*i,32);local network=read(nt+24*i,24)
                 assert(u(behavior,0)==profile.behavior,'Unsupported sentry behavior')
@@ -139,11 +139,11 @@ function M.snapshot(api,game)
                 if profile.fire_gate then
                     -- The MG/Gatling firing handlers use this microsecond deadline
                     -- for native candidate selection, independently of spin-up.
-                    local clock_root=read(game+0x276c068,8)
+                    local clock_root=read(game+0x3326348,8)
                     row.selection={address=ba+152,deadline=behavior:sub(153,160),
                         now=ticks(read(pointer(clock_root)+24,8)),
-                        guards={{address=game+0x276c068,bytes=clock_root}}}
-                    local wm=pointer(read(game+0x276c9f0,8))
+                        guards={{address=game+0x3326348,bytes=clock_root}}}
+                    local wm=pointer(read(game+0x3326ce0,8))
                     local fire_guards={}
                     local wi=lookup(wm,48,id,32768,fire_guards)
                     assert(wi and wi~=0xffffffff and wi<16384,'Weapon data unavailable')
@@ -154,14 +154,14 @@ function M.snapshot(api,game)
                     end
                     local _,we=weapon_array(72,8,8)
                     assert(we==entity_pointer,'Weapon identity mismatch')
-                    local _,wr=weapon_array(88,992,212)
+                    local _,wr=weapon_array(88,1008,228)
                     local mode_address,network=weapon_array(96,12,12)
-                    local count,index=u(wr,200),u(wr,204)
+                    local count,index=u(wr,216),u(wr,220)
                     assert(count>0 and count<=24 and index<count,'Invalid sentry fire nodes')
-                    local node=u(wr,104+4*index)
+                    local node=u(wr,120+4*index)
                     assert(node<1024 and u(network,0)<=8,'Invalid sentry weapon state')
-                    fire_guards[#fire_guards+1]={address=game+0x276c9f0,bytes=read(game+0x276c9f0,8)}
-                    local cm=pointer(read(game+0x276c390,8))
+                    fire_guards[#fire_guards+1]={address=game+0x3326ce0,bytes=read(game+0x3326ce0,8)}
+                    local cm=pointer(read(game+0x3326660,8))
                     local ci=lookup(cm,40,id,32768,fire_guards)
                     assert(ci and ci~=0xffffffff and ci<16384,'Weapon trigger unavailable')
                     local triggers=read(cm+88,8)
@@ -175,9 +175,9 @@ function M.snapshot(api,game)
                         -- target node. Resolve its unit so that surface is not
                         -- mistaken for terrain. Keep target guards separate:
                         -- target removal must never prevent restoring a sentry.
-                        local fg={};local fb=read(game+0x276c9c8,8)
+                        local fg={};local fb=read(game+0x3326cb8,8)
                         local fm=pointer(fb)
-                        fg[#fg+1]={address=game+0x276c9c8,bytes=fb}
+                        fg[#fg+1]={address=game+0x3326cb8,bytes=fb}
                         local fi=lookup(fm,73808,row.target,131072,fg)
                         if fi and fi~=0xffffffff then
                             assert(fi<16384,'Target faction index out of range')
@@ -552,11 +552,11 @@ function M.apply(api,game,exe,state)
             local expected=fromhex(s[2])
             assert(api.read(game+s[1],#expected)==expected,'Unsupported native sentry setter')
         end
-        local pose_signature=fromhex('40534883ec204863dae8f20eeaff488bc84c8b0041ff90e8')
-        assert(exe and api.read(exe+0x1fcb50,#pose_signature)==pose_signature,'Unsupported engine pose getter')
+        local pose_signature=fromhex('40534883ec204863dae89206eaff488bc84c8b0041ff90e8')
+        assert(exe and api.read(exe+0x1fd220,#pose_signature)==pose_signature,'Unsupported engine pose getter')
         for _,s in ipairs({
-            {0x7a48f0,'33c04c8d0597a101020f1f800000000049390cc0740cffc083f80475f3'},
-            {0x7f95c0,'488bc4f30f11582089480855535657415441554156415748'},
+            {0x79f860,'33c04c8d05c7b201020f1f800000000049390cc0740cffc083f80475f3'},
+            {0x7f4590,'488bc4f30f11582089480855535657415441554156415748'},
         }) do
             local expected=fromhex(s[2])
             assert(api.read(exe+s[1],#expected)==expected,'Unsupported terrain query')

@@ -13,11 +13,11 @@ local function fixture()
     function api.read(a,n)local t={};for i=0,n-1 do if not mem[a+i]then return nil end;t[#t+1]=mem[a+i]end;return table.concat(t)end
     function api.pointer(b)return b and tonumber(ffi.cast('const uint64_t *',b)[0])end
     function api.bind()error('Unvalidated native binding')end
-    zero(tm,392);zero(bm,112);zero(rm,96);zero(entity,24);zero(rt,208);zero(nt,24);zero(behavior,496);zero(control,16)
-    p(game+0x276ca40,tm);p(game+0x276c470,bm);p(game+0x276ca80,rm)
-    p(game+0x276c068,0x990000);p(0x990018,1000000);p(behavior+152,1700000)
-    zero(wm,104);zero(cm,96);p(game+0x276c9f0,wm);p(game+0x276c390,cm)
-    local fm=0x950000;zero(fm+73808,32);p(game+0x276c9c8,fm)
+    zero(tm,392);zero(bm,112);zero(rm,96);zero(entity,24);zero(rt,208);zero(nt,24);zero(behavior,504);zero(control,16)
+    p(game+0x3326d30,tm);p(game+0x3326740,bm);p(game+0x3326d70,rm)
+    p(game+0x3326348,0x990000);p(0x990018,1000000);p(behavior+152,1700000)
+    zero(wm,104);zero(cm,96);p(game+0x3326ce0,wm);p(game+0x3326660,cm)
+    local fm=0x950000;zero(fm+73808,32);p(game+0x3326cb8,fm)
     p(fm+73808,0x980000);w(fm+73816,8);w(fm+73820,0);w(fm+73824,2)
     zero(0x980000,64);w(0x980010,77);w(0x980014,0)
     p(fm+73832,0x970000);p(0x970000,0x971000);zero(0x971000,20)
@@ -30,10 +30,10 @@ local function fixture()
         zero(map,64);w(map+16,9);w(map+20,0);p(m+e,map+128);p(map+128,entity)
     end
     p(tm+376,rt);p(tm+384,nt);p(bm+96,behavior);p(rm+88,control)
-    zero(0x940000,992);p(wm+88,0x940000);w(0x940000+200,1);w(0x940000+104,15)
+    zero(0x940000,1008);p(wm+88,0x940000);w(0x940000+216,1);w(0x940000+120,15)
     zero(0x941000,12);p(wm+96,0x941000);w(0x941000,1);p(cm+88,0x942000);put(0x942000,'\1')
     put(entity,('\x70\x1d\xe3\x58\xcf\xd6\x85\xef'));w(entity+8,9);w(entity+12,1);w(entity+16,12);put(entity+20,'\1')
-    w(behavior,212);w(behavior+8,12);w(behavior+24,77);w(behavior+96,3);put(behavior+120,'\1')
+    w(behavior,213);w(behavior+8,12);w(behavior+24,77);w(behavior+96,3);put(behavior+120,'\1')
     w(rt,77);put(control,'\1');put(control+8,bytes('float',80));put(control+12,bytes('float',50))
     return api,game,put,w,p,{tm=tm,bm=bm,rm=rm,entity=entity,rt=rt,nt=nt,behavior=behavior,control=control}
 end
@@ -72,12 +72,12 @@ end
 local count=0;for _ in pairs(M.profiles)do count=count+1 end;assert(count==7)
 put(a.entity+20,'\0');assert(#M.snapshot(api,g)==0)
 put(a.entity+20,'\3');assert(#M.snapshot(api,g)==0)
-put(a.entity+20,'\1');w(a.behavior,999);assert(not pcall(M.snapshot,api,g));w(a.behavior,212)
+put(a.entity+20,'\1');w(a.behavior,999);assert(not pcall(M.snapshot,api,g));w(a.behavior,213)
 w(a.bm+72,7);assert(not pcall(M.snapshot,api,g));w(a.bm+72,8)
 p(0x820080,a.entity+24);assert(not pcall(M.snapshot,api,g));p(0x820080,a.entity)
 put(a.rt+8,bytes('uint32_t',0x7fc00000));assert(not pcall(M.snapshot,api,g));put(a.rt+8,bytes('float',0))
 assert(not pcall(M.apply,api,g,nil,{})) -- no setter signatures, so no binding or mutation
-p(g+0x276ca40,0);local ok,why=M.apply(api,g,nil,{})
+p(g+0x3326d30,0);local ok,why=M.apply(api,g,nil,{})
 assert(ok and why=='waiting_for_sentries')
 print('PASS: native-layout fixture, offsets, authority/resource gates, malformed maps/vectors and no binding before validation')
 

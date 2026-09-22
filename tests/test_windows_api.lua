@@ -76,13 +76,13 @@ do
     local function uint(a,n)value(a,'uint32_t',n)end
     local function ptr(a,n)value(a,'uint64_t',n)end
     local exe=0x100000;local actor=0x80020001;local unit=0x40000a
-    local pool=exe+0x236db80+64*20;zero(pool,56)
+    local pool=exe+0x2369b00+64*20;zero(pool,56)
     ptr(pool,0x200000);uint(pool+28,56);uint(pool+36,2);uint(pool+40,0x1ffff);uint(pool+52,0x20000)
     local entry=0x200000+56;zero(entry,40);uint(entry,actor);uint(entry+12,unit);uint(entry+20,1)
-    ptr(exe+0x27be808+176*2,0x300000);ptr(0x300018,0x400000)
+    ptr(exe+0x27ba8a8+176*2,0x300000);ptr(0x300018,0x400000)
     local body=0x400000+160;zero(body,160);uint(body+68,1);uint(body+108,14)
     uint(body+144,actor);uint(body+148,unit)
-    ptr(exe+0x27c9d28,0x500000);uint(0x500000+248,103);ptr(0x500000+256,0x600000)
+    ptr(exe+0x27c5e48,0x500000);uint(0x500000+248,103);ptr(0x500000+256,0x600000)
     uint(0x600000+4*14,0x04a8fbf9);uint(0x600000+4*55,0xa0d00a12)
     api.read=function(address,size)
         local a=tonumber(ffi.cast('uintptr_t',address));local b={}
@@ -128,7 +128,7 @@ do
     local function scalar(kind,v)return ffi.string(ffi.new(kind..'[1]',v),ffi.sizeof(kind))end
     local function ptr(address,v)memory[address]=scalar('uint64_t',v)end
     local function uint(address,v)memory[address]=scalar('uint32_t',v)end
-    ptr(0x200000+0x1a140f0,0x300000);uint(0x300098,2)
+    ptr(0x200000+0x1a100f0,0x300000);uint(0x300098,2)
     ptr(0x3000a0,0x400000);memory[0x400001]='\1'
     ptr(0x300088,0x500000);ptr(0x500008,0x600000)
     uint(0x600008,unit);uint(0x600070,2);ptr(0x600000,0x700000)
@@ -144,7 +144,7 @@ do
     memory[0x400001]='\2';assert(not pcall(binding.pose,unit,1));memory[0x400001]='\1'
     uint(0x600008,unit+1);assert(not pcall(binding.pose,unit,1));uint(0x600008,unit)
     memory[0x800000]='wrong';assert(not pcall(binding.pose,unit,1))
-    ptr(0x100000+0x2780698,0xa00000);ptr(0x100000+0x276f0c8,0xb00000)
+    ptr(0x100000+0x347d7e0,0xa00000);ptr(0x100000+0x346bfa0,0xb00000)
     uint(0xa00000,1)
     assert(binding.terrain_path(unit,string.rep('\0',12),string.rep('\0',12))==nil)
     uint(0xa00000,0)
