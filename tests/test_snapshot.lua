@@ -80,3 +80,20 @@ assert(not pcall(M.apply,api,g,nil,{})) -- no setter signatures, so no binding o
 p(g+0x276ca40,0);local ok,why=M.apply(api,g,nil,{})
 assert(ok and why=='waiting_for_sentries')
 print('PASS: native-layout fixture, offsets, authority/resource gates, malformed maps/vectors and no binding before validation')
+
+-- Discovery remains fresh while contiguous entity-pointer reads are bounded.
+do
+    local api,g,put,w,p,a=fixture()
+    w(a.tm+308,512);w(a.tm+320,512);w(a.tm+324,512)
+    for i=0,511 do p(0x810080+i*8,0xa00000+i*32);put(0xa00000+i*32,string.rep('\0',24)) end
+    local read=api.read;local calls,batches=0,0
+    api.read=function(address,size)
+        calls=calls+1;assert(size<=2048,'unbounded registry read')
+        if address>=0x810080 and address<0x811080 then batches=batches+1 end
+        return read(address,size)
+    end
+    assert(#M.snapshot(api,g)==0 and calls==520 and batches==2,'batch pointer array, retain fresh entity reads')
+    api.read=function(address,size)if size==2048 then return nil end;return read(address,size)end
+    assert(not pcall(M.snapshot,api,g),'failed batch must not produce candidate sentries')
+end
+print('PASS: 512 non-sentries use two bounded pointer reads and reject failed snapshots')

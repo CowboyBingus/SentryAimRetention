@@ -86,8 +86,12 @@ function M.snapshot(api,game)
         end
         error('Entity map probe bound exceeded')
     end
+    -- Bound each contiguous registry read; entity identity/authority stays fresh.
+    local pointers
     for i=0,active-1 do
-        local entity_pointer=read(ep+8*i,8);local entity_address=pointer(entity_pointer)
+        if i%256==0 then pointers=read(ep+8*i,math.min(256,active-i)*8) end
+        local at=(i%256)*8
+        local entity_pointer=pointers:sub(at+1,at+8);local entity_address=pointer(entity_pointer)
         local entity=read(entity_address,24);local profile=profiles[entity:sub(1,8)]
         if profile and bit.band(entity:byte(21),3)==1 then
             local guards={}

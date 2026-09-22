@@ -1,3 +1,10 @@
+# v1.0.9
+
+- Batch targeting-registry pointer reads to reduce per-update work.
+- Disable routine diagnostic file writes by default.
+- Preserve fresh entity checks, aim retention and firing gates.
+- Offline regression checks cover this update; live frame-time verification remains pending.
+
 # v1.0.8
 
 - Moves logs to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs`.

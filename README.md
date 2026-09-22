@@ -11,3 +11,5 @@ Aims to keep autonomous sentries facing their last tracked target after losing i
 - **Stop wasted ground fire.** Gatling and machine-gun sentries pause shots when their target is lost, their aim still belongs to a previous target, or solid terrain blocks the current target point. Low, exposed targets remain eligible; firing resumes when the path clears and aim settles. Destructible cover, including fences in that collision class, keeps normal penetration and destruction behavior.
 
 Aim retention applies to locally controlled Gatling, machine gun, laser cannon, rocket, flamethrower, mortar and EMS mortar sentries. Selective firing pauses apply to Gatling and machine-gun sentries.
+
+Release **v1.0.9** includes input/performance fixes. Offline checks cover this revision; in-game frame-time validation is pending. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.

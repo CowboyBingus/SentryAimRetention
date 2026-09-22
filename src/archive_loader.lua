@@ -7,6 +7,7 @@ return function(create_api,patch,build)
     local api,game,exe,last_log
     local function report(status,active,force)
         state.status=status;state.active=active
+        if not force and rawget(_G,'CowboyBingusDiagnostics')~=true then return end
         local now=api and api.time and api.time() or 0
         if not force and last_log and now-last_log<2 then return end
         last_log=now
