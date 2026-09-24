@@ -1,3 +1,6 @@
+> Current local compatibility candidate for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; live gameplay verification is pending.
+
+Mission repair v1.0.12: Updates all seven sentry behavior identities and the behavior/weapon record layouts. The production reader resolves the deployed Gatling and its fire state in current mission data; installed combat behavior still needs confirmation.
 
 ![Sentry Aim Retention](assets/banner.png)
 
@@ -13,6 +16,6 @@ Aims to keep autonomous sentries facing their last tracked target after losing i
 
 Aim retention applies to locally controlled Gatling, machine gun, laser cannon, rocket, flamethrower, mortar and EMS mortar sentries. Selective firing pauses apply to Gatling and machine-gun sentries.
 
-See [validation coverage](docs/MIGRATION_VALIDATION.md) for the scope of the release checks. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.
+Release **v1.0.12** includes input/performance fixes. Offline checks cover this revision; in-game frame-time validation is pending. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.
 
-Current version: **v1.0.11**, for game build **25327279**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
+Current version: **v1.0.12**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).

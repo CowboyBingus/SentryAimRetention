@@ -1,3 +1,9 @@
+# v1.0.12
+
+- Refresh the game-build checks for Steam build 25480438.
+- Preserve sentry aim retention and target handoffs.
+- Offline builds and package checks pass; live gameplay validation remains pending.
+
 # v1.0.11
 
 - Update compatibility for game build 25327279.

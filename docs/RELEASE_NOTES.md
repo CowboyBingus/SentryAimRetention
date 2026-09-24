@@ -1,2 +1,3 @@
-- Update compatibility for game build 25327279.
-- Restore sentry aim retention, target handoffs and firing checks.
+- Refresh the game-build checks for Steam build 25480438.
+- Preserve sentry aim retention and target handoffs.
+- Offline builds and package checks pass; live gameplay validation remains pending.
