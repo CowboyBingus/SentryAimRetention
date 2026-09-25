@@ -22,14 +22,14 @@ python -B scripts/build.py
 
 Set `HD2_LUAJIT` to an existing compatible compiler or `HD2_GAME_ROOT` for a nonstandard game installation. No neighboring mod, parent-project test, private capture or extracted resource is required. Supported executable hashes are checked before compilation.
 
-The build runs the aim, firing, loader, registry and Windows memory-adapter checks, verifies the installable archive, audits the publication inventory, and creates `releases/Sentry-Aim-Retention-v1.0.7.zip` and `releases/Sentry-Aim-Retention-v1.0.7-source.zip`. In the shared mod workspace, both ZIPs go to the existing base `releases/` directory. Build output stays in ignored `build/`. Building does not install or launch the game.
+The build runs the aim, firing, loader, registry and Windows memory-adapter checks, verifies the installable archive, audits the publication inventory, and creates `releases/Sentry-Aim-Retention-v1.0.13.zip` and `releases/Sentry-Aim-Retention-v1.0.13-source.zip`. In the shared mod workspace, both ZIPs go to the existing base `releases/` directory. Build output stays in ignored `build/`. Building does not install or launch the game.
 
 The source ZIP contains only the explicit inventory in `scripts/privacy_audit.py`. It excludes Git metadata, other projects, dependency checkouts, logs, captures and build output. Extract it to obtain an independent source tree. No repository history is copied or rewritten.
 
 Run the publication audit separately with:
 
 ```powershell
-python -B scripts/privacy_audit.py --git --zip releases/Sentry-Aim-Retention-v1.0.7.zip
+python -B scripts/privacy_audit.py --git --zip releases/Sentry-Aim-Retention-v1.0.13.zip
 ```
 
 Use the shared release path when building inside the development workspace. In a standalone Git repository, `--history` checks reachable history and commit identities; `--staged` checks the index. Before publishing commits, use an appropriate public author identity and review their metadata. Publishing and tagging are separate from building.

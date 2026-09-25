@@ -1,3 +1,9 @@
+# v1.0.13
+
+- Skips the second per-frame check while no sentries are deployed; a sentry placed mid-frame is picked up on the next frame.
+- Decodes fields through reused cells and reuses one read buffer instead of allocating per read.
+- Behavior is unchanged; aim holds and releases were confirmed live.
+
 # v1.0.12
 
 - Refresh the game-build checks for Steam build 25480438.

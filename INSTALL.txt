@@ -1,22 +1,16 @@
-Current local compatibility candidate for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; live gameplay verification is pending.
+Release for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; checked in live play.
 
-Mission compatibility repair for Steam 25480438. Offline checks pass; installed gameplay verification is pending.
-
-TEST BUILD: mission-mode and centralized-log corrections. In-game validation pending.
+Performance update for Steam 25480438. Offline checks pass; aim holds and releases were confirmed live.
 
 Requires Bingus Shared Loader v16 for the shared log folder.
 
 Logs: %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs
 
-
-
-Sentry Aim Retention - v1.0.12
+Sentry Aim Retention - v1.0.13
 
 Requires Bingus Shared Loader loader-v14 or newer / API 1.
 
 Supported game: Steam build 25480438 / EXE 1.8.46015.0.
-
-
 
 INSTALL WITH ARSENAL OR HD2MM
 
@@ -28,7 +22,7 @@ INSTALL WITH ARSENAL OR HD2MM
 
    Keep one enabled loader entry.
 
-3. Import Sentry-Aim-Retention-v1.0.12.zip and enable its single option.
+3. Import Sentry-Aim-Retention-v1.0.13.zip and enable its single option.
 
 4. In Arsenal's default priority mode, put Bingus Shared Loader LAST.
 
@@ -36,15 +30,11 @@ INSTALL WITH ARSENAL OR HD2MM
 
 5. Purge and Deploy, then launch the game.
 
-
-
 Other CowboyBingus gameplay modules remain optional. The mod contains one Lua
 
 resource and does not replace boot or Wwise. The shared loader preserves the
 
 original Wwise callbacks and retains its existing Overlay v2 integration.
-
-
 
 BEHAVIOR
 
@@ -58,15 +48,11 @@ behavior node. The dead-target fallback and zero-point transition keep the hold.
 
 Restore the instance's saved turn speeds, including customizations.
 
-
-
 Includes resource profiles for Gatling, machine gun, laser cannon, rocket,
 
 flamethrower, mortar and EMS mortar. Native ownership gates restrict changes
 
 to locally authoritative instances. Manned turrets and enemy turrets are excluded.
-
-
 
 SELECTIVE FIRING PAUSES
 
@@ -106,15 +92,11 @@ also checks beyond that cover for solid terrain rather than ignoring its unit.
 
 Exposed low targets remain eligible; a clear path and settled aim restore firing.
 
-
-
 The module uses the native no-fire mode to pause shots. It leaves the AI trigger
 
 and projectile spin-up countdown untouched. The sweep gate currently covers
 
 Gatling and machine-gun sentries; the other profiles receive aim retention only.
-
-
 
 VALIDATION STATUS
 
@@ -130,15 +112,13 @@ The scan transition is inferred from observed behavior-node and aim changes.
 
 Lua/native scheduling can still permit a first unwanted shot before interception.
 
-
-
 DIAGNOSTICS
 
 Check %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/BingusSharedLoader.log for the module load result.
 
 The header must say loader-v6 or newer and sentry_aim_retention must say loaded.
 
-Check %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/SentryAimRetention.log for a data-v8.1 header and the
+Check %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs/SentryAimRetention.log for a data-v8.6 header and the
 
 fire_paused, fire_pauses, fire_resumes and reselections counters. Per-sentry firing entries
 
@@ -151,8 +131,6 @@ entries identify the hit unit/actor, selected target unit, hit/target distances
 and collision filter, and the age of the latest completed query. Existing holds, releases and late_aim counters
 
 remain available. Logs refresh at most every two seconds during normal updates.
-
-
 
 UNINSTALL
 
