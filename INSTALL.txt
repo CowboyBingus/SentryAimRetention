@@ -1,14 +1,12 @@
-Release for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; checked in live play.
+Release for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; ran in live play.
 
-Performance update for Steam 25480438. Offline checks pass; aim holds and releases were confirmed live.
-
-Requires Bingus Shared Loader v16 for the shared log folder.
+Performance and resilience update for Steam 25480438. Aim holds and releases were confirmed live.
 
 Logs: %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs
 
-Sentry Aim Retention - v1.0.13
+Sentry Aim Retention - v1.1.0
 
-Requires Bingus Shared Loader loader-v14 or newer / API 1.
+Requires Bingus Shared Loader v18 or newer (v19 is current).
 
 Supported game: Steam build 25480438 / EXE 1.8.46015.0.
 
@@ -16,13 +14,13 @@ INSTALL WITH ARSENAL OR HD2MM
 
 1. Close Helldivers 2.
 
-2. Install Bingus-Shared-Loader-v17.zip (loader-v6 or newer) from:
+2. Install the latest Bingus Shared Loader (v18 or newer) from:
 
    https://github.com/CowboyBingus/BingusSharedLoader/releases/latest
 
    Keep one enabled loader entry.
 
-3. Import Sentry-Aim-Retention-v1.0.13.zip and enable its single option.
+3. Import Sentry-Aim-Retention-v1.1.0.zip and enable its single option.
 
 4. In Arsenal's default priority mode, put Bingus Shared Loader LAST.
 
@@ -104,9 +102,11 @@ Captured combat confirms Gatling rounds emitted through
 
 large target-handoff turns. Offline replay checks the selective pause decisions,
 
-including broad turns, small adjustments and resuming fire. Live behavior with
+including broad turns, small adjustments and resuming fire. This build ran in
 
-this module installed and multiplayer authority transitions remain pending.
+real play on 2026-10-04 with 13 aim holds and no errors. Multiplayer authority
+
+transitions remain unverified in game.
 
 The scan transition is inferred from observed behavior-node and aim changes.
 
@@ -139,4 +139,3 @@ Close the game, disable/remove Sentry Aim Retention, then Purge and Deploy.
 Keep Bingus Shared Loader enabled for any other dependent mods.
 
 Logs: %LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs
-Requires Bingus Shared Loader v17 or newer for this log folder.

@@ -1,6 +1,6 @@
 # Implementation and validation
 
-The gameplay module uses Bingus Shared Loader loader-v6 or newer, API 1 or newer. It supports Steam build 24826606 / EXE 1.8.45317.0 and verifies both native module hashes. Earlier loaders do not discover the sentry module, even if its archive is installed. Confirm activation in the loader log after replacing the loader and deploying.
+The gameplay module requires Bingus Shared Loader v18 or newer (v19 is current); its load check accepts API 1 or newer. It supports Steam build 25480438 / EXE 1.8.46015.0 and verifies both native module hashes. Earlier loaders do not discover the sentry module, even if its archive is installed. Confirm activation in the loader log after replacing the loader and deploying.
 
 The targeting, behavior and turret registries identify seven autonomous sentry resource profiles. The module samples the current target and aim on both sides of the existing Lua update callback. After a tracked target disappears, it requests the native retention flag, temporarily sets both rotation speeds to zero and restores the last sampled raw/computed aim. Replacement targets release the hold. The saved per-instance turn speeds are restored when the hold ends.
 
@@ -10,9 +10,9 @@ Only validated, locally authoritative sentry instances are eligible. Entity mapp
 
 The native zero-speed branches skip both angular and animation writes. Offline evidence does not establish that this preserves the visible barrel pose or projectile direction. The sampled aim is a tracked point, not a directly measured last-shot bearing. Lua/native scheduling may allow the first unwanted turn or shot before a hold is acquired. The `late_aim` counter indicates a changed aim before interception; it cannot establish whether a shot occurred.
 
-Regression checks cover target loss, reacquisition, inferred scanning, control ownership, customized-speed restoration, component relocation, partial writes, shutdown, loader failures and memory protections. The anonymized Gatling fixture checks decisions through eight losses and releases. These checks do not prove live firing behavior, machine-gun acquisition, non-Gatling combat, or multiplayer authority transitions. In-game validation remains pending.
+Regression checks cover target loss, reacquisition, inferred scanning, control ownership, customized-speed restoration, component relocation, partial writes, shutdown, loader failures and memory protections. The anonymized Gatling fixture checks decisions through eight losses and releases. A replay of game memory captured read-only from one Gatling sentry on build 25327279 checks the snapshot's registry, map, component, weapon and clock decoding on real bytes; the port to build 25480438 changed no offset the snapshot reads. These checks do not prove live firing behavior, machine-gun acquisition, non-Gatling combat, or multiplayer authority transitions. Aim holds and releases were confirmed live on earlier releases. The v1.1.0 build with the kept layout ran in real play on 2026-10-04 with 13 aim holds and no errors; multiplayer authority transitions remain unverified in game.
 
-The fixture keeps the observed ordering and vector relationships, with remapped entity identifiers and normalized time. It contains no process addresses, player identifiers, machine details or source capture path. Raw research material is not distributed.
+The decision fixture keeps the observed ordering and vector relationships, with remapped entity identifiers and normalized time. It contains no process addresses, player identifiers, machine details or source capture path. The replay capture keeps its session's randomized addresses and no player identifiers, machine details or source capture path ([privacy scope](PRIVACY.md)). Other raw research material is not distributed.
 
 ## Selective firing pauses
 
@@ -116,8 +116,9 @@ live verification of the corrected build.
 
 Diagnostics retain the most recent query's reason, hit unit/actor, target unit,
 hit distance, target distance, collision filter and age. Aged results show when native workers have
-prevented a fresh query. Private captures and native decompilation are excluded
-from both distribution ZIPs.
+prevented a fresh query. The installable ZIP contains no capture; the source ZIP
+contains only the snapshot replay's capture. Private captures and native
+decompilation are excluded from both.
 
 The adjacent-handoff regression uses angles from the dense combat sample and
 target gaps up to 700 ms. It checks immediate close reacquisition, missing or
@@ -180,9 +181,10 @@ claiming that every cause of continuous firing has been identified.
 
 ## Target search after loss
 
-The hash-locked Gatling and MG firing handlers at game.dll+0x280410 and
-game.dll+0x32ac00 compare the behavior runtime's 64-bit deadline at +152 with
-the native microsecond clock (game.dll+0x276c068, pointee +24). Behavior context
+The hash-locked Gatling and MG firing handlers (game.dll+0x280410 and
+game.dll+0x32ac00 on build 24826606) compare the behavior runtime's 64-bit
+deadline at +152 with the native microsecond clock (pointee +24 of
+game.dll+0x3326348 on build 25480438; 0x276c068 on 24826606). Behavior context
 points eight bytes into that runtime. A nonzero source-flags value schedules
 the next query one second ahead; zero flags use 250 ms. The loss fallback uses
 nonzero point flags, so the one-second deadline can outlive the selected enemy.
@@ -208,3 +210,54 @@ shutdown or error; a new native deadline is preserved. Partial writes and
 component relocation are covered by regression checks. The `reselections`
 counter records accepted requests. Native ordering and the resulting combat
 cadence still need verification after installing this build.
+
+## Shared runtime and per-frame cost
+
+The module embeds Bingus Shared Runtime v1 as three byte-identical files:
+`bingus_runtime.lua` (the session table every copy shares, and the update
+guard), `bingus_memory.lua` (reads, page checks, module hashes, the build check
+and the clock) and `bingus_write.lua` (checked writes). Their Windows functions
+are declared under private, versioned names; the adapter itself declares only
+named function-pointer types for the game functions it binds. The tests declare
+every Windows name the module binds with a hostile prototype first.
+
+At load, the runtime's build check hashes the executable and game.dll at most
+once per session for every mod on the runtime and refuses another build
+(`unsupported game build`) or missing modules (`game modules unavailable`).
+
+The guard runs the check before the game update and, while a sentry is
+engaged (it tracks a target, holds aim, pauses fire or waits on a target
+search), again after it, so a target lost inside the update is answered before
+the next frame. A sentry with nothing to do is checked once per frame. The previous update runs outside `pcall`, so its
+errors reach the game unchanged. After an error below the mod, the next update
+restores every hold, fire pause and search request and pauses the mod until the
+updates below have returned on 60 frames in a row. Eight errors below it, or
+eight of its own, each within about a minute of the last, stop it for the
+session; the first failure is kept in the shutdown status.
+
+Each sentry is located once: its registry indices, component addresses,
+weapon and trigger slots, fire nodes and guards are kept in a layout, and its
+live fields are read into reused buffers. Every check verifies the kept
+layout's guards against the registry headers, entity pointers and entity
+header it reads anyway, plus three map-slot reads; any difference locates the
+sentry again in the same check. Writes still verify every guard by reading it
+first. Targeting entries that are not sentries this machine controls are
+classified when their pointer first appears or changes, and every 30 checks.
+Memory fields decode from their bytes, so a NaN in game memory reads as a plain
+NaN, which the range checks reject.
+
+`tests/test_snapshot.lua` pins the API calls per frame for each scenario, for
+example 1 read outside a mission, 2 reads idle in a mission, 34 calls for a
+sentry with no target (one check) and 74 for a tracking one (two checks), and
+5 page queries (about 1.5 ms in game) on the frame a target is lost.
+`PerformanceBaseline/bench_sentry_aim.lua` in the mod workspace measures a check
+in the game's own LuaJIT: per check 26-29 reads (before: 68-90), 10-11 us and
+64-288 bytes of garbage (before: 56-64 us and 9.5-10.8 KB), test-process times.
+The kept layout compiles to about 20 KB more machine code than before (about
+35 KB against 15.7 KB), because the old paths mostly failed to compile. In live play
+on 2026-10-04 the mod cost 0.020 ms per frame in missions with a sentry
+deployed (0.178 before) and 0.012 on the ship (0.057 before). The clock is read once per
+check once a sentry has been seen, from the performance counter, without
+allocating (`tests/test_windows_api.lua` pins 0 bytes per call, compiled and
+interpreted). The guard's own per-frame cost and the clock's cost in game are
+unmeasured.

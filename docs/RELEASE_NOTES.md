@@ -1,3 +1,8 @@
-- Skips the second per-frame check while no sentries are deployed; a sentry placed mid-frame is picked up on the next frame.
-- Decodes fields through reused cells and reuses one read buffer instead of allocating per read.
-- Behavior is unchanged; aim holds and releases were confirmed live.
+- Each deployed sentry's memory layout is kept instead of located again on every check: 26-29 memory reads per check instead of 68-90, with far less garbage.
+- An idle sentry is checked once per frame; the second check runs only while a sentry tracks, holds aim, pauses fire or waits on a target search.
+- Errors from the game or from other mods now reach the game unchanged instead of looking like errors in this mod.
+- After such an error the mod releases its sentry controls, pauses and resumes once 60 updates in a row succeed.
+- An error in the mod's own checks no longer stops it for the session; eight errors close together still stop it.
+- Memory access comes from Bingus Shared Runtime v1, so another mod's Windows declarations can no longer break it.
+- Requires Bingus Shared Loader v18 or newer.
+- Measured in live play: 0.020 ms per frame in missions with a sentry deployed (0.178 before) and 0.012 on the ship (0.057 before).
