@@ -3,8 +3,10 @@ Supports Helldivers 2 Steam build 25480438 / EXE 1.8.46015.0.
 Offline source, package and read-only module checks passed. Aim holds and
 releases were confirmed live on earlier releases. The v1.1.0 build ran in real
 play on 2026-10-04 with 13 aim holds and no errors, and its per-frame cost was
-measured there. Multiplayer authority transitions and visual checks remain
-pending. The 21
+measured there. The v1.1.1 build ran in game on the ship and in solo missions
+without sentries on 2026-10-17, where its per-frame cost was measured; an
+equivalence test compares its sentry handling with v1.1.0 offline. Multiplayer
+authority transitions and visual checks remain pending. The 21
 external live checks did not write game memory or installed files.
 
 Public source includes one read-only memory capture from build 25327279 for the

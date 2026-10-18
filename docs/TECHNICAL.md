@@ -235,6 +235,22 @@ updates below have returned on 60 frames in a row. Eight errors below it, or
 eight of its own, each within about a minute of the last, stop it for the
 session; the first failure is kept in the shutdown status.
 
+Waiting for a sentry (v1.1.1). When a check finds no targeting registry, or
+only entries that are not sentries this machine controls, nothing is held,
+paused or requested, and the loader's step ends the following frames without
+an API call. Every 60th frame it checks for a mission: the mode record at
+`[game.dll+0x33266a0]` (68 bytes, two reads), where word +8 set and word +0x40
+in 1..7 mean a mission. Outside a mission nothing else is read. In a mission,
+or when the record cannot be read, the registry is rescanned on every 30th
+frame, into buffers made once per cache and decoded in place, so waiting
+allocates nothing. A mission start is seen within 59 frames, and a new sentry,
+a changed registry or an ownership change within 29. Once a check finds a
+sentry this machine controls, every frame checks again as in v1.1.0.
+`tests/test_idle_gate.lua` runs v1.1.0 (`tests/reference/`) and this code side
+by side over 2,600 scripted frames and compares every write, native call,
+status and counter; they differ only inside those windows, where the new code
+makes no call.
+
 Each sentry is located once: its registry indices, component addresses,
 weapon and trigger slots, fire nodes and guards are kept in a layout, and its
 live fields are read into reused buffers. Every check verifies the kept
@@ -247,16 +263,19 @@ Memory fields decode from their bytes, so a NaN in game memory reads as a plain
 NaN, which the range checks reject.
 
 `tests/test_snapshot.lua` pins the API calls per frame for each scenario, for
-example 1 read outside a mission, 2 reads idle in a mission, 34 calls for a
-sentry with no target (one check) and 74 for a tracking one (two checks), and
-5 page queries (about 1.5 ms in game) on the frame a target is lost.
+example 2 reads every 60th frame and none between outside a mission, 4 reads
+on every 30th frame idle in a mission with one non-sentry entry, 26 reads for
+a sentry with no target (one check) and 58 for a tracking one (two checks),
+and 5 page queries (about 1.5 ms in game) on the frame a target is lost.
 `PerformanceBaseline/bench_sentry_aim.lua` in the mod workspace measures a check
 in the game's own LuaJIT: per check 26-29 reads (before: 68-90), 10-11 us and
 64-288 bytes of garbage (before: 56-64 us and 9.5-10.8 KB), test-process times.
 The kept layout compiles to about 20 KB more machine code than before (about
 35 KB against 15.7 KB), because the old paths mostly failed to compile. In live play
 on 2026-10-04 the mod cost 0.020 ms per frame in missions with a sentry
-deployed (0.178 before) and 0.012 on the ship (0.057 before). The clock is read once per
+deployed (0.178 before) and 0.012 on the ship (0.057 before). Measured in
+game on 2026-10-17, v1.1.1 waiting for a sentry cost 0.003 ms per frame on the
+ship (v1.1.0: 0.011) and 0.003-0.004 in missions (v1.1.0: 0.010). The clock is read once per
 check once a sentry has been seen, from the performance counter, without
 allocating (`tests/test_windows_api.lua` pins 0 bytes per call, compiled and
 interpreted). The guard's own per-frame cost and the clock's cost in game are

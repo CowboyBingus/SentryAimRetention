@@ -1,3 +1,7 @@
+# v1.1.1
+
+- With none of your sentries deployed the mod waits instead of reading the targeting registry every frame: on the ship it checks for a mission every 60th frame, in a mission for a new sentry every 30th. Measured in game: 0.011 to 0.003 ms per frame on the ship, 0.010 to 0.003-0.004 in missions and 0.016 to 0.006 under heavy load.
+
 # v1.1.0
 
 - A deployed sentry's memory layout is now kept and re-verified with a few reads instead of located from scratch on every check: 26-29 reads per check instead of 68-90.

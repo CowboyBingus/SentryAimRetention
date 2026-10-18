@@ -1,6 +1,6 @@
 > Release for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; ran in live play. Requires Bingus Shared Loader v18 or newer (v19 is current).
 
-Performance and resilience update v1.1.0: keeps each sentry's memory layout instead of locating it on every check, checks an idle sentry once per frame, and pauses instead of stopping after errors. Measured in live play: 0.020 ms per frame in missions with a sentry deployed (0.178 before) and 0.012 on the ship.
+Performance update v1.1.1: with none of your sentries deployed the mod waits for a mission and a new sentry instead of reading the targeting registry every frame. Measured in game: 0.011 -> 0.003 ms per frame on the ship and 0.010 -> 0.003-0.004 in missions. Sentry handling is unchanged; a newly placed sentry is found within 30 frames.
 
 ![Sentry Aim Retention](assets/banner.png)
 
@@ -16,9 +16,9 @@ Aims to keep autonomous sentries facing their last tracked target after losing i
 
 Aim retention applies to locally controlled Gatling, machine gun, laser cannon, rocket, flamethrower, mortar and EMS mortar sentries. Selective firing pauses apply to Gatling and machine-gun sentries.
 
-Release **v1.1.0** lowers the per-check cost and adds the shared runtime's error handling. Aim holds and releases were confirmed live on earlier releases; this build ran in real play on 2026-10-04 with 13 aim holds and no errors. Multiplayer authority transitions and the visible barrel pose during a hold remain unverified in game. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.
+Release **v1.1.1** lowers the cost of waiting for a sentry; v1.1.0 lowered the per-check cost and added the shared runtime's error handling. Aim holds and releases were confirmed live on earlier releases; v1.1.0 ran in real play on 2026-10-04 with 13 aim holds and no errors, and v1.1.1 ran in game on the ship and in missions without sentries. Its sentry handling is checked offline against v1.1.0. Multiplayer authority transitions and the visible barrel pose during a hold remain unverified in game. Routine diagnostics are off by default; developers can set `CowboyBingusDiagnostics = true` before initialization to enable them.
 
-Current version: **v1.1.0**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
+Current version: **v1.1.1**, for game build **25480438**. See [changes](CHANGELOG.md) and [validation coverage](docs/MIGRATION_VALIDATION.md).
 
 **AI disclosure:** Claude Opus 5.5 assisted with research, implementation, tests and documentation.
 

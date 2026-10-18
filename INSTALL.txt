@@ -1,10 +1,10 @@
 Release for Steam build 25480438 / EXE 1.8.46015.0. Offline checks passed; ran in live play.
 
-Performance and resilience update for Steam 25480438. Aim holds and releases were confirmed live.
+Performance update for Steam 25480438: waiting for a sentry costs less. Aim holds and releases were confirmed live on earlier releases.
 
 Logs: %LOCALAPPDATA%/CowboyBingus/Helldivers2/Logs
 
-Sentry Aim Retention - v1.1.0
+Sentry Aim Retention - v1.1.1
 
 Requires Bingus Shared Loader v18 or newer (v19 is current).
 
@@ -20,7 +20,7 @@ INSTALL WITH ARSENAL OR HD2MM
 
    Keep one enabled loader entry.
 
-3. Import Sentry-Aim-Retention-v1.1.0.zip and enable its single option.
+3. Import Sentry-Aim-Retention-v1.1.1.zip and enable its single option.
 
 4. In Arsenal's default priority mode, put Bingus Shared Loader LAST.
 
@@ -102,11 +102,15 @@ Captured combat confirms Gatling rounds emitted through
 
 large target-handoff turns. Offline replay checks the selective pause decisions,
 
-including broad turns, small adjustments and resuming fire. This build ran in
+including broad turns, small adjustments and resuming fire. v1.1.0 ran in
 
-real play on 2026-10-04 with 13 aim holds and no errors. Multiplayer authority
+real play on 2026-10-04 with 13 aim holds and no errors. v1.1.1 ran in game on
 
-transitions remain unverified in game.
+the ship and in missions without sentries; its sentry handling is checked
+
+offline against v1.1.0. Multiplayer authority transitions remain unverified
+
+in game.
 
 The scan transition is inferred from observed behavior-node and aim changes.
 
